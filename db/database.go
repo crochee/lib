@@ -11,9 +11,11 @@ import (
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
 
-	"lib"
-	"lib/log"
+	"github.com/crochee/lib"
+	"github.com/crochee/lib/log"
 )
+
+var NotFound = gorm.ErrRecordNotFound
 
 type Option struct {
 	Debug bool

@@ -5,7 +5,7 @@ import (
 
 	"gorm.io/gorm"
 
-	"lib/id"
+	"github.com/crochee/lib/id"
 )
 
 type SnowID struct{}

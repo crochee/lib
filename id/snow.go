@@ -1,7 +1,3 @@
-// Author: crochee
-// Date: 2021/9/12
-
-// Package id
 package id
 
 import (
