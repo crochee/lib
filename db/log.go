@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/utils"
 
-	"lib/log"
+	"github.com/crochee/lib/log"
 )
 
 func newLog(l log.Builder, cfg logger.Config) logger.Interface {

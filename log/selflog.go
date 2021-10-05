@@ -1,4 +1,3 @@
-// Package log
 package log
 
 import (
@@ -8,7 +7,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"lib/e"
+	"github.com/crochee/lib/e"
 )
 
 const (

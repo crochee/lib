@@ -1,6 +1,3 @@
-// Date: 2021/9/20
-
-// Package id
 package id
 
 import "testing"

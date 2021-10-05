@@ -10,7 +10,7 @@ import (
 	"gorm.io/gorm/clause"
 	"gorm.io/gorm/schema"
 
-	"lib"
+	"github.com/crochee/lib"
 )
 
 type DeletedAt sql.NullTime
