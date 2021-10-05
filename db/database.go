@@ -70,31 +70,6 @@ func NewClient(ctx context.Context, opts ...func(*Option)) (*DB, error) {
 	return &DB{DB: client, debug: c.Debug}, nil
 }
 
-//// NewMock new a mock todo mock解除测试对数据库等中间件的依赖
-//func NewMock() (sqlmock.Sqlmock, error) {
-//	// 创建sqlmock
-//	slqDb, mock, err := sqlmock.With()
-//	if err != nil {
-//		return nil, err
-//	}
-//	// 结合gorm、sqlmock
-//	if db, err = gorm.Open(mysql.With(mysql.Config{
-//		SkipInitializeWithVersion: true,
-//		Conn:                      slqDb,
-//	}), &gorm.Config{
-//		NamingStrategy: schema.NamingStrategy{
-//			SingularTable: true, // 不考虑表名单复数变化
-//		},
-//		DisableForeignKeyConstraintWhenMigrating: true,
-//		NowFunc: func() time.Time {
-//			return time.Now().UTC()
-//		},
-//	}); err != nil {
-//		return nil, err
-//	}
-//	return mock, err
-//}
-
 type DB struct {
 	*gorm.DB
 	debug bool
