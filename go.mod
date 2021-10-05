@@ -1,4 +1,4 @@
-module lib
+module github.com/crochee/lib
 
 go 1.17
 
