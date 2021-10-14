@@ -1,7 +1,5 @@
 package log
 
-import "os"
-
 var systemLogger Builder = NoLogger{}
 
 // InitSystemLogger 初始化系统级日志对象
@@ -88,9 +86,5 @@ func Fatalf(format string, v ...interface{}) {
 //
 // @param: message 信息
 func Fatal(message string) {
-	systemLogger.Error(message)
-	if err := systemLogger.Sync(); err != nil {
-		_, _ = os.Stderr.WriteString(err.Error())
-	}
-	os.Exit(1)
+	systemLogger.Fatal(message)
 }
