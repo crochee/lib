@@ -30,24 +30,19 @@ const (
 )
 
 const (
-	ErrSuccess Code = 20000000
 	// 00~99为服务级别错误码
 
-	ErrInvalidParam        Code = 40000000
-	ErrNotFound            Code = 40400001
-	ErrInternalServerError Code = 50000002
+	ErrInternalServerError Code = 50000000
+	ErrInvalidParam        Code = 40000001
+	ErrNotFound            Code = 40400002
 	ErrMethodNotAllow      Code = 40500003
-	ErrOperateDB           Code = 50000004
 )
 
 var codeZhMessageBox = map[Code]string{
-	ErrSuccess: "成功",
-
 	ErrInvalidParam:        "请求参数不正确",
 	ErrNotFound:            "资源不存在",
 	ErrMethodNotAllow:      "方法不允许",
 	ErrInternalServerError: "服务器内部错误",
-	ErrOperateDB:           "操作数据库失败",
 }
 
 // AddCode business code to codeMessageBox

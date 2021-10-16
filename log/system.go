@@ -88,9 +88,10 @@ func Fatalf(format string, v ...interface{}) {
 //
 // @param: message 信息
 func Fatal(message string) {
-	systemLogger.Error(message)
-	if err := systemLogger.Sync(); err != nil {
-		_, _ = os.Stderr.WriteString(err.Error())
-	}
-	os.Exit(1)
+	systemLogger.Fatal(message)
+}
+
+// Sync 刷新数据落盘
+func Sync() {
+	_, _ = os.Stderr.WriteString(systemLogger.Sync().Error())
 }

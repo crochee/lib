@@ -17,10 +17,11 @@ const (
 )
 
 type Option struct {
-	Path      string
-	Level     string
-	Skip      int
-	SetWriter func(string) io.Writer
+	Path       string
+	Level      string
+	Skip       int
+	JsonEnable bool
+	SetWriter  func(string) io.Writer
 }
 
 // NewLogger 初始化日志对象
@@ -30,9 +31,11 @@ type Option struct {
 func NewLogger(opts ...func(*Option)) *Logger {
 	l := &Logger{
 		Option: Option{
-			Path:  "",
-			Level: "INFO",
-			Skip:  1,
+			Path:       "",
+			Level:      "INFO",
+			Skip:       1,
+			JsonEnable: true,
+			SetWriter:  SetLoggerWriter,
 		},
 	}
 	for _, opt := range opts {
@@ -40,13 +43,8 @@ func NewLogger(opts ...func(*Option)) *Logger {
 	}
 	l.Level = strings.ToUpper(l.Level)
 	var encode encoder
-	if l.Option.Path == "" {
-		encode = zapcore.NewConsoleEncoder
-	} else {
+	if l.Option.JsonEnable {
 		encode = zapcore.NewJSONEncoder
-	}
-	if l.SetWriter == nil {
-		l.SetWriter = SetLoggerWriter
 	}
 	l.Logger = newZap(l.Option.Level, encode, l.Option.Skip, l.SetWriter(l.Option.Path))
 	l.LoggerSugar = l.Logger.Sugar()

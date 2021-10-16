@@ -3,6 +3,7 @@ module github.com/crochee/lib
 go 1.17
 
 require (
+	github.com/crochee/uid v1.0.2
 	github.com/golang/mock v1.6.0
 	github.com/json-iterator/go v1.1.12
 	github.com/satori/go.uuid v1.2.0

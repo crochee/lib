@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -15,7 +16,11 @@ import (
 	"github.com/crochee/lib/log"
 )
 
-var NotFound = gorm.ErrRecordNotFound
+var (
+	NotFound           = gorm.ErrRecordNotFound
+	ErrNotRowsAffected = errors.New("0 rows affected")
+	ErrDuplicate       = "1062: Duplicate"
+)
 
 type Option struct {
 	Debug bool
