@@ -3,9 +3,7 @@ package client
 import (
 	"bytes"
 	"context"
-	"errors"
 	"net/http"
-	"net/url"
 
 	"moul.io/http2curl"
 
@@ -32,16 +30,8 @@ func Do(req *http.Request) (*http.Response, error) {
 // NewRequest create request
 func NewRequest(ctx context.Context, method string, uri string,
 	body []byte, headers http.Header) (*http.Request, error) {
-	tempUri, err := url.Parse(uri)
+	req, err := http.NewRequestWithContext(ctx, method, uri, bytes.NewReader(body))
 	if err != nil {
-		return nil, err
-	}
-	if tempUri.Hostname() == "" {
-		return nil, errors.New("the url hasn't ip or domain name")
-	}
-	tempUri.RawQuery = tempUri.Query().Encode()
-	var req *http.Request
-	if req, err = http.NewRequestWithContext(ctx, method, tempUri.String(), bytes.NewReader(body)); err != nil {
 		return nil, err
 	}
 	for key, header := range headers {
