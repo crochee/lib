@@ -11,7 +11,7 @@ import (
 	"github.com/crochee/lib/log"
 )
 
-func newLog(l log.Builder, cfg logger.Config) logger.Interface {
+func newLog(l log.Interface, cfg logger.Config) logger.Interface {
 	var (
 		infoStr      = "%s\n[info] "
 		warnStr      = "%s\n[warn] "
@@ -33,7 +33,7 @@ func newLog(l log.Builder, cfg logger.Config) logger.Interface {
 			"[%.3fms] " + logger.BlueBold + "[rows:%v]" + logger.Reset + " %s"
 	}
 	return &ormLog{
-		Builder:      l,
+		Interface:    l,
 		Config:       cfg,
 		infoStr:      infoStr,
 		warnStr:      warnStr,
@@ -45,7 +45,7 @@ func newLog(l log.Builder, cfg logger.Config) logger.Interface {
 }
 
 type ormLog struct {
-	log.Builder
+	log.Interface
 	logger.Config
 	infoStr, warnStr, errStr            string
 	traceStr, traceErrStr, traceWarnStr string
@@ -58,19 +58,19 @@ func (l *ormLog) LogMode(level logger.LogLevel) logger.Interface {
 
 func (l *ormLog) Info(_ context.Context, msg string, data ...interface{}) {
 	if l.LogLevel >= logger.Info {
-		l.Builder.Infof(l.infoStr+msg, append([]interface{}{utils.FileWithLineNum()}, data...)...)
+		l.Interface.Infof(l.infoStr+msg, append([]interface{}{utils.FileWithLineNum()}, data...)...)
 	}
 }
 
 func (l *ormLog) Warn(_ context.Context, msg string, data ...interface{}) {
 	if l.LogLevel >= logger.Warn {
-		l.Builder.Warnf(l.infoStr+msg, append([]interface{}{utils.FileWithLineNum()}, data...)...)
+		l.Interface.Warnf(l.infoStr+msg, append([]interface{}{utils.FileWithLineNum()}, data...)...)
 	}
 }
 
 func (l *ormLog) Error(_ context.Context, msg string, data ...interface{}) {
 	if l.LogLevel >= logger.Error {
-		l.Builder.Errorf(l.infoStr+msg, append([]interface{}{utils.FileWithLineNum()}, data...)...)
+		l.Interface.Errorf(l.infoStr+msg, append([]interface{}{utils.FileWithLineNum()}, data...)...)
 	}
 }
 
@@ -85,29 +85,29 @@ func (l *ormLog) Trace(_ context.Context, begin time.Time, fc func() (string, in
 	case err != nil && l.LogLevel >= logger.Error:
 		s, rows := fc()
 		if rows == -1 {
-			l.Builder.Errorf(l.traceErrStr, utils.FileWithLineNum(), err,
+			l.Interface.Errorf(l.traceErrStr, utils.FileWithLineNum(), err,
 				float64(elapsed.Nanoseconds())/NanosecondPerMillisecond, "-", s)
 		} else {
-			l.Builder.Errorf(l.traceErrStr, utils.FileWithLineNum(), err,
+			l.Interface.Errorf(l.traceErrStr, utils.FileWithLineNum(), err,
 				float64(elapsed.Nanoseconds())/NanosecondPerMillisecond, rows, s)
 		}
 	case elapsed > l.SlowThreshold && l.SlowThreshold != 0 && l.LogLevel >= logger.Warn:
 		s, rows := fc()
 		slowLog := fmt.Sprintf("SLOW SQL >= %v", l.SlowThreshold)
 		if rows == -1 {
-			l.Builder.Warnf(l.traceWarnStr, utils.FileWithLineNum(), slowLog,
+			l.Interface.Warnf(l.traceWarnStr, utils.FileWithLineNum(), slowLog,
 				float64(elapsed.Nanoseconds())/NanosecondPerMillisecond, "-", s)
 		} else {
-			l.Builder.Warnf(l.traceWarnStr, utils.FileWithLineNum(), slowLog,
+			l.Interface.Warnf(l.traceWarnStr, utils.FileWithLineNum(), slowLog,
 				float64(elapsed.Nanoseconds())/NanosecondPerMillisecond, rows, s)
 		}
 	case l.LogLevel == logger.Info:
 		s, rows := fc()
 		if rows == -1 {
-			l.Builder.Infof(l.traceStr, utils.FileWithLineNum(),
+			l.Interface.Infof(l.traceStr, utils.FileWithLineNum(),
 				float64(elapsed.Nanoseconds())/NanosecondPerMillisecond, "-", s)
 		} else {
-			l.Builder.Infof(l.traceStr, utils.FileWithLineNum(),
+			l.Interface.Infof(l.traceStr, utils.FileWithLineNum(),
 				float64(elapsed.Nanoseconds())/NanosecondPerMillisecond, rows, s)
 		}
 	}

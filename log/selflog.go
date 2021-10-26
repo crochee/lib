@@ -42,8 +42,8 @@ func NewLogger(opts ...func(*Option)) *Logger {
 		opt(&l.Option)
 	}
 	l.Level = strings.ToUpper(l.Level)
-	var encode encoder
-	if l.Option.JsonEnable {
+	var encode encoder = zapcore.NewConsoleEncoder
+	if l.Option.JsonEnable && l.Option.Path != "" {
 		encode = zapcore.NewJSONEncoder
 	}
 	l.Logger = newZap(l.Option.Level, encode, l.Option.Skip, l.SetWriter(l.Option.Path))
@@ -62,7 +62,7 @@ func (l *Logger) Opt() Option {
 	return l.Option
 }
 
-func (l *Logger) With(fields ...Field) Builder {
+func (l *Logger) With(fields ...Field) Interface {
 	fieldList := make([]zap.Field, 0, len(fields))
 	for _, field := range fields {
 		fieldList = append(fieldList, zap.Any(field.Key, field.Value))
