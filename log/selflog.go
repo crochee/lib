@@ -62,7 +62,7 @@ func (l *Logger) Opt() Option {
 	return l.Option
 }
 
-func (l *Logger) With(fields ...Field) Builder {
+func (l *Logger) With(fields ...Field) Interface {
 	fieldList := make([]zap.Field, 0, len(fields))
 	for _, field := range fields {
 		fieldList = append(fieldList, zap.Any(field.Key, field.Value))

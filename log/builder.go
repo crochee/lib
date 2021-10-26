@@ -5,9 +5,9 @@ import (
 	"os"
 )
 
-type Builder interface {
+type Interface interface {
 	Opt() Option
-	With(...Field) Builder
+	With(...Field) Interface
 	Debugf(format string, v ...interface{})
 	Debug(message string)
 	Infof(format string, v ...interface{})
@@ -29,13 +29,13 @@ type Field struct {
 type loggerKey struct{}
 
 // WithContext Adds fields.
-func WithContext(ctx context.Context, log Builder) context.Context {
+func WithContext(ctx context.Context, log Interface) context.Context {
 	return context.WithValue(ctx, loggerKey{}, log)
 }
 
 // FromContext Gets the log from context.
-func FromContext(ctx context.Context) Builder {
-	l, ok := ctx.Value(loggerKey{}).(Builder)
+func FromContext(ctx context.Context) Interface {
+	l, ok := ctx.Value(loggerKey{}).(Interface)
 	if !ok {
 		return NoLogger{}
 	}
@@ -49,7 +49,7 @@ func (n NoLogger) Opt() Option {
 	return Option{}
 }
 
-func (n NoLogger) With(...Field) Builder {
+func (n NoLogger) With(...Field) Interface {
 	return n
 }
 

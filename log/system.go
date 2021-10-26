@@ -2,7 +2,7 @@ package log
 
 import "os"
 
-var systemLogger Builder = NoLogger{}
+var systemLogger Interface = NoLogger{}
 
 // InitSystemLogger 初始化系统级日志对象
 //
