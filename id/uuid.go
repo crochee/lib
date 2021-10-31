@@ -5,10 +5,10 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func Uuid() string {
+func UUID() string {
 	return uuid.NewV4().String()
 }
 
-func Uid() string {
+func UID() string {
 	return uid.New().String()
 }

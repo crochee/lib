@@ -21,8 +21,8 @@ type option struct {
 	t *http.Transport
 }
 
-// TlsConfig config tls
-func TlsConfig(cfg *tls.Config) Option {
+// TLSConfig config tls
+func TLSConfig(cfg *tls.Config) Option {
 	return func(o *option) { o.t.TLSClientConfig = cfg }
 }
 

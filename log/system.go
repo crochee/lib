@@ -36,7 +36,6 @@ func Debug(message string) {
 // @param: v 参数信息
 func Infof(format string, v ...interface{}) {
 	systemLogger.Infof(format, v...)
-
 }
 
 // Info 打印Info信息

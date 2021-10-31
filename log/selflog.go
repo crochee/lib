@@ -20,7 +20,7 @@ type Option struct {
 	Path       string
 	Level      string
 	Skip       int
-	JsonEnable bool
+	JSONEnable bool
 	SetWriter  func(string) io.Writer
 }
 
@@ -34,7 +34,7 @@ func NewLogger(opts ...func(*Option)) *Logger {
 			Path:       "",
 			Level:      "INFO",
 			Skip:       1,
-			JsonEnable: true,
+			JSONEnable: true,
 			SetWriter:  SetLoggerWriter,
 		},
 	}
@@ -43,7 +43,7 @@ func NewLogger(opts ...func(*Option)) *Logger {
 	}
 	l.Level = strings.ToUpper(l.Level)
 	var encode encoder = zapcore.NewConsoleEncoder
-	if l.Option.JsonEnable && l.Option.Path != "" {
+	if l.Option.JSONEnable && l.Option.Path != "" {
 		encode = zapcore.NewJSONEncoder
 	}
 	l.Logger = newZap(l.Option.Level, encode, l.Option.Skip, l.SetWriter(l.Option.Path))
