@@ -154,5 +154,4 @@ func (s SoftDeleteDeletedClause) ModifyStatement(stmt *gorm.Statement) {
 
 	stmt.AddClauseIfNotExists(clause.Update{})
 	stmt.Build("UPDATE", "SET", "WHERE")
-
 }

@@ -10,6 +10,8 @@ type ErrorCode interface {
 	WithMessage(string)
 }
 
+const CodeBit = 100000
+
 // ErrCode 规定组成部分为http状态码+5位错误码
 type ErrCode struct {
 	Err int
@@ -21,11 +23,11 @@ func (e *ErrCode) Error() string {
 }
 
 func (e *ErrCode) StatusCode() int {
-	return e.Err / 100000
+	return e.Err / CodeBit
 }
 
 func (e *ErrCode) Code() int {
-	return e.Err % 100000
+	return e.Err % CodeBit
 }
 
 func (e *ErrCode) Message() string {
