@@ -12,8 +12,8 @@ import (
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
 
-	"github.com/crochee/lib"
-	"github.com/crochee/lib/log"
+	"github.com/crochee/lirity"
+	"github.com/crochee/lirity/log"
 )
 
 var (
