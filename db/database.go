@@ -49,6 +49,7 @@ func NewClient(ctx context.Context, opts ...func(*Option)) (*DB, error) {
 	}
 	client, err := gorm.Open(mysql.Open(dsn(&c)),
 		&gorm.Config{
+			PrepareStmt: true,
 			NamingStrategy: schema.NamingStrategy{
 				SingularTable: true, // 不考虑表名单复数变化
 			},

@@ -10,10 +10,8 @@ func (f FileOrContent) String() string {
 
 // IsPath returns true if the FileOrContent is a file path, otherwise returns false.
 func (f FileOrContent) IsPath() bool {
-	if _, err := os.Stat(f.String()); err != nil {
-		return false
-	}
-	return true
+	_, err := os.Stat(f.String())
+	return err == nil
 }
 
 func (f FileOrContent) Read() ([]byte, error) {
