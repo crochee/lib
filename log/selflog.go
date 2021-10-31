@@ -7,7 +7,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/crochee/lib/e"
+	"github.com/crochee/lirity/e"
 )
 
 const (

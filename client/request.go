@@ -7,7 +7,7 @@ import (
 
 	"moul.io/http2curl"
 
-	"github.com/crochee/lib/log"
+	"github.com/crochee/lirity/log"
 )
 
 var DefaultClient Client = NewStandardClient()

@@ -1,4 +1,4 @@
-module github.com/crochee/lib
+module github.com/crochee/lirity
 
 go 1.17
 
