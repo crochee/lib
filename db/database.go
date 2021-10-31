@@ -102,7 +102,7 @@ func (d *DB) Close() error {
 	if err != nil {
 		return err
 	}
-	lib.Close(sqlDB)
+	lirity.Close(sqlDB)
 	return nil
 }
 

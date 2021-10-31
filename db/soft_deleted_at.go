@@ -36,7 +36,7 @@ func (n DeletedAt) MarshalJSON() ([]byte, error) {
 }
 
 func (n *DeletedAt) UnmarshalJSON(b []byte) error {
-	if lib.String(b) == "null" {
+	if lirity.String(b) == "null" {
 		n.Valid = false
 		return nil
 	}
