@@ -4,29 +4,29 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/crochee/lirity/v"
 )
 
 func Struct2Map(s interface{}) map[string]interface{} {
-	return Struct2MapTag(s, "map")
+	return Struct2MapTag(s, "json")
 }
 
 func Struct2MapTag(s interface{}, tagName string) map[string]interface{} {
 	t := reflect.TypeOf(s)
-	v := reflect.ValueOf(s)
+	value := reflect.ValueOf(s)
 
-	if v.Kind() == reflect.Ptr && v.Elem().Kind() == reflect.Struct {
+	if value.Kind() == reflect.Ptr && value.Elem().Kind() == reflect.Struct {
 		t = t.Elem()
-		v = v.Elem()
+		value = value.Elem()
 	}
-
-	if v.Kind() != reflect.Struct {
+	if value.Kind() != reflect.Struct {
 		return nil
 	}
-
 	m := make(map[string]interface{})
 
 	for i := 0; i < t.NumField(); i++ {
-		fv := v.Field(i)
+		fv := value.Field(i)
 		ft := t.Field(i)
 
 		if !fv.CanInterface() {
@@ -36,37 +36,25 @@ func Struct2MapTag(s interface{}, tagName string) map[string]interface{} {
 		if ft.PkgPath != "" { // unexported
 			continue
 		}
-
-		var name string
-		var option string
-
-		name, option = parseTag(ft.Tag.Get(tagName))
-
+		name, option := parseTag(ft.Tag.Get(tagName))
 		if name == "-" {
 			continue // ignore "-"
 		}
-
 		if name == "" {
 			name = ft.Name // use field name
 		}
-
-		if option == "omitempty" {
-			if isEmpty(&fv) {
-				continue // skip empty field
-			}
+		if option == "omitempty" && isEmpty(&fv) {
+			continue // skip empty field
 		}
-
 		// ft.Anonymous means embedded field
 		if ft.Anonymous {
 			if fv.Kind() == reflect.Ptr && fv.IsNil() {
 				continue // nil
 			}
-
 			if (fv.Kind() == reflect.Struct) ||
 				(fv.Kind() == reflect.Ptr && fv.Elem().Kind() == reflect.Struct) {
 				// embedded struct
 				embedded := Struct2MapTag(fv.Interface(), tagName)
-
 				for embName, embValue := range embedded {
 					m[embName] = embValue
 				}
@@ -75,9 +63,9 @@ func Struct2MapTag(s interface{}, tagName string) map[string]interface{} {
 		}
 
 		if option == "string" {
-			s := num2String(fv)
-			if s != nil {
-				m[name] = s
+			temp := num2String(fv)
+			if temp != nil {
+				m[name] = temp
 				continue
 			}
 		}
@@ -91,9 +79,9 @@ func Struct2MapTag(s interface{}, tagName string) map[string]interface{} {
 func num2String(fv reflect.Value) interface{} {
 	kind := fv.Kind()
 	if kind == reflect.Int || kind == reflect.Int8 || kind == reflect.Int16 || kind == reflect.Int32 || kind == reflect.Int64 {
-		return strconv.FormatInt(fv.Int(), 10)
+		return strconv.FormatInt(fv.Int(), v.DecimalSystem)
 	} else if kind == reflect.Uint || kind == reflect.Uint8 || kind == reflect.Uint16 || kind == reflect.Uint32 || kind == reflect.Uint64 {
-		return strconv.FormatUint(fv.Uint(), 10)
+		return strconv.FormatUint(fv.Uint(), v.DecimalSystem)
 	} else if kind == reflect.Float32 || kind == reflect.Float64 {
 		return strconv.FormatFloat(fv.Float(), 'f', 2, 64)
 	}
@@ -101,20 +89,20 @@ func num2String(fv reflect.Value) interface{} {
 	return nil
 }
 
-func isEmpty(v *reflect.Value) bool {
-	k := v.Kind()
+func isEmpty(value *reflect.Value) bool {
+	k := value.Kind()
 	if k == reflect.Bool {
-		return !v.Bool()
+		return !value.Bool()
 	} else if reflect.Int < k && k < reflect.Int64 {
-		return v.Int() == 0
+		return value.Int() == 0
 	} else if reflect.Uint < k && k < reflect.Uintptr {
-		return v.Uint() == 0
+		return value.Uint() == 0
 	} else if k == reflect.Float32 || k == reflect.Float64 {
-		return v.Float() == 0
+		return value.Float() == 0
 	} else if k == reflect.Array || k == reflect.Map || k == reflect.Slice || k == reflect.String {
-		return v.Len() == 0
+		return value.Len() == 0
 	} else if k == reflect.Interface || k == reflect.Ptr {
-		return v.IsNil()
+		return value.IsNil()
 	}
 	return false
 }

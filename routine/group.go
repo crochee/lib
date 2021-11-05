@@ -8,11 +8,11 @@ import (
 )
 
 type errGroup struct {
-	waitGroup sync.WaitGroup
 	ctx       context.Context
-	cancel    context.CancelFunc
-	errOnce   sync.Once
 	err       error
+	cancel    context.CancelFunc
+	waitGroup sync.WaitGroup
+	errOnce   sync.Once
 }
 
 // NewGroup starts a recoverable goroutine errGroup with a context.

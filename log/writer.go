@@ -3,6 +3,7 @@ package log
 import (
 	"io"
 	"os"
+	"strings"
 
 	"gopkg.in/natefinch/lumberjack.v2"
 )
@@ -20,4 +21,13 @@ func SetLoggerWriter(path string) io.Writer {
 		Compress:   false,           // 不压缩
 		LocalTime:  true,            // 备份名采用本地时间
 	}
+}
+
+// JudgeLevel return level by mode
+func JudgeLevel(level, mode string) string {
+	level = strings.ToUpper(level)
+	if level == DEBUG && !strings.EqualFold(mode, "debug") {
+		level = INFO
+	}
+	return level
 }
