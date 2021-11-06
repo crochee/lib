@@ -3,6 +3,7 @@ package log
 import (
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -14,7 +15,7 @@ func SetLoggerWriter(path string) io.Writer {
 		return os.Stdout
 	}
 	return &lumberjack.Logger{
-		Filename:   path,
+		Filename:   filepath.Clean("./log/" + path),
 		MaxSize:    DefaultLogSizeM, // 单个日志文件最大MaxSize*M大小
 		MaxAge:     MaxLogDays,      // days
 		MaxBackups: DefaultMaxZip,   // 备份数量
