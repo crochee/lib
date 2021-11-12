@@ -7,7 +7,7 @@ import (
 
 	"github.com/sony/sonyflake"
 
-	"github.com/crochee/lirity/v"
+	"github.com/crochee/lirity/variable"
 )
 
 var sf = sonyflake.NewSonyflake(sonyflake.Settings{MachineID: machineID})
@@ -23,7 +23,7 @@ func NextIDString() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return strconv.FormatUint(id, v.DecimalSystem), nil
+	return strconv.FormatUint(id, variable.DecimalSystem), nil
 }
 
 func machineID() (uint16, error) {

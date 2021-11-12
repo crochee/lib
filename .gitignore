@@ -13,5 +13,6 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
-./golangci-lint-demo.yml
-./golangci-lint.json
+golangci-lint.json
+golangci-lint-demo.yml
+.idea

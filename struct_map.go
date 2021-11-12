@@ -5,14 +5,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/crochee/lirity/v"
+	"github.com/crochee/lirity/variable"
 )
 
 func Struct2Map(s interface{}) map[string]interface{} {
-	return Struct2MapTag(s, "json")
+	return Struct2MapWithTag(s, "json")
 }
 
-func Struct2MapTag(s interface{}, tagName string) map[string]interface{} {
+func Struct2MapWithTag(s interface{}, tagName string) map[string]interface{} {
 	t := reflect.TypeOf(s)
 	value := reflect.ValueOf(s)
 
@@ -54,7 +54,7 @@ func Struct2MapTag(s interface{}, tagName string) map[string]interface{} {
 			if (fv.Kind() == reflect.Struct) ||
 				(fv.Kind() == reflect.Ptr && fv.Elem().Kind() == reflect.Struct) {
 				// embedded struct
-				embedded := Struct2MapTag(fv.Interface(), tagName)
+				embedded := Struct2MapWithTag(fv.Interface(), tagName)
 				for embName, embValue := range embedded {
 					m[embName] = embValue
 				}
@@ -79,9 +79,9 @@ func Struct2MapTag(s interface{}, tagName string) map[string]interface{} {
 func num2String(fv reflect.Value) interface{} {
 	kind := fv.Kind()
 	if kind == reflect.Int || kind == reflect.Int8 || kind == reflect.Int16 || kind == reflect.Int32 || kind == reflect.Int64 {
-		return strconv.FormatInt(fv.Int(), v.DecimalSystem)
+		return strconv.FormatInt(fv.Int(), variable.DecimalSystem)
 	} else if kind == reflect.Uint || kind == reflect.Uint8 || kind == reflect.Uint16 || kind == reflect.Uint32 || kind == reflect.Uint64 {
-		return strconv.FormatUint(fv.Uint(), v.DecimalSystem)
+		return strconv.FormatUint(fv.Uint(), variable.DecimalSystem)
 	} else if kind == reflect.Float32 || kind == reflect.Float64 {
 		return strconv.FormatFloat(fv.Float(), 'f', 2, 64)
 	}

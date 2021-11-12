@@ -25,6 +25,10 @@ func (SnowID) BeforeCreate(tx *gorm.DB) error {
 
 type Base struct {
 	SnowID
+	Time
+}
+
+type Time struct {
 	CreatedAt time.Time `json:"created_at" gorm:"column:created_at;not null;default:current_timestamp();comment:创建时间"`
 	UpdatedAt time.Time `json:"updated_at" gorm:"column:updated_at;not null;default:current_timestamp() on update current_timestamp();comment:更新时间"`
 	DeletedAt DeletedAt `json:"-" gorm:"column:deleted_at;index;comment:删除时间"`
