@@ -11,7 +11,7 @@ import (
 	"github.com/crochee/lirity/log"
 )
 
-func newLog(l log.Interface, cfg logger.Config) logger.Interface {
+func NewLog(l log.Interface, cfg logger.Config) logger.Interface {
 	var (
 		infoStr      = "%s\n[info] "
 		warnStr      = "%s\n[warn] "
@@ -32,7 +32,7 @@ func newLog(l log.Interface, cfg logger.Config) logger.Interface {
 		traceErrStr = logger.RedBold + "%s " + logger.MagentaBold + "%s\n" + logger.Reset + logger.Yellow +
 			"[%.3fms] " + logger.BlueBold + "[rows:%v]" + logger.Reset + " %s"
 	}
-	return &ormLog{
+	return &Log{
 		Interface:    l,
 		Config:       cfg,
 		infoStr:      infoStr,
@@ -44,31 +44,31 @@ func newLog(l log.Interface, cfg logger.Config) logger.Interface {
 	}
 }
 
-type ormLog struct {
+type Log struct {
 	log.Interface
 	logger.Config
 	infoStr, warnStr, errStr            string
 	traceStr, traceErrStr, traceWarnStr string
 }
 
-func (l *ormLog) LogMode(level logger.LogLevel) logger.Interface {
+func (l *Log) LogMode(level logger.LogLevel) logger.Interface {
 	l.LogLevel = level
 	return l
 }
 
-func (l *ormLog) Info(_ context.Context, msg string, data ...interface{}) {
+func (l *Log) Info(_ context.Context, msg string, data ...interface{}) {
 	if l.LogLevel >= logger.Info {
 		l.Interface.Infof(l.infoStr+msg, append([]interface{}{utils.FileWithLineNum()}, data...)...)
 	}
 }
 
-func (l *ormLog) Warn(_ context.Context, msg string, data ...interface{}) {
+func (l *Log) Warn(_ context.Context, msg string, data ...interface{}) {
 	if l.LogLevel >= logger.Warn {
 		l.Interface.Warnf(l.infoStr+msg, append([]interface{}{utils.FileWithLineNum()}, data...)...)
 	}
 }
 
-func (l *ormLog) Error(_ context.Context, msg string, data ...interface{}) {
+func (l *Log) Error(_ context.Context, msg string, data ...interface{}) {
 	if l.LogLevel >= logger.Error {
 		l.Interface.Errorf(l.infoStr+msg, append([]interface{}{utils.FileWithLineNum()}, data...)...)
 	}
@@ -76,7 +76,7 @@ func (l *ormLog) Error(_ context.Context, msg string, data ...interface{}) {
 
 const NanosecondPerMillisecond = 1e6
 
-func (l *ormLog) Trace(_ context.Context, begin time.Time, fc func() (string, int64), err error) {
+func (l *Log) Trace(_ context.Context, begin time.Time, fc func() (string, int64), err error) {
 	if l.LogLevel <= logger.Silent {
 		return
 	}

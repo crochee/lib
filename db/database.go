@@ -85,12 +85,32 @@ type DB struct {
 
 // WithContext gets logger to set orm logger
 func (d *DB) WithContext(ctx context.Context) *DB {
+	return d.With(ctx)
+}
+
+type SessionOpt struct {
+	SlowThreshold time.Duration
+	Colorful      bool
+	LevelFunc     func(string, bool) logger.LogLevel
+}
+
+// With options to set orm logger
+func (d *DB) With(ctx context.Context, opts ...func(*SessionOpt)) *DB {
 	fromContextLog := log.FromContext(ctx)
+	option := SessionOpt{
+		SlowThreshold: 10 * time.Second,
+		Colorful:      false,
+		LevelFunc:     getLevel,
+	}
+	for _, opt := range opts {
+		opt(&option)
+	}
 	return &DB{DB: d.Session(&gorm.Session{
 		Context: ctx,
-		Logger: newLog(fromContextLog, logger.Config{
-			SlowThreshold: 10 * time.Second,
-			LogLevel:      getLevel(fromContextLog.Opt().Level, d.debug),
+		Logger: NewLog(fromContextLog, logger.Config{
+			SlowThreshold: option.SlowThreshold,
+			Colorful:      option.Colorful,
+			LogLevel:      option.LevelFunc(fromContextLog.Opt().Level, d.debug),
 		}),
 	}),
 		debug: d.debug,
