@@ -44,7 +44,7 @@ func NewRequest(ctx context.Context, method string, uri string,
 	if curl, err = http2curl.GetCurlCommand(req); err == nil {
 		log.FromContext(ctx).Debug(curl.String())
 	} else {
-		log.FromContext(ctx).Error(curl.String())
+		log.FromContext(ctx).Error(err.Error())
 	}
 	return req, nil
 }
