@@ -5,46 +5,47 @@ import "fmt"
 type ErrorCode interface {
 	error
 	StatusCode() int
-	Code() int
-	Message() string
-	WithMessage(string)
+	ErrorCode() int
+	Msg() string
+	WithMsg(string)
 }
 
 const CodeBit = 100000
 
 // ErrCode 规定组成部分为http状态码+5位错误码
 type ErrCode struct {
-	Err int
-	Msg string
+	Code    int         `json:"code"`
+	Message string      `json:"message"`
+	Result  interface{} `json:"result"`
 }
 
 func (e *ErrCode) Error() string {
-	return e.Msg
+	return e.Message
 }
 
 func (e *ErrCode) StatusCode() int {
-	return e.Err / CodeBit
+	return e.Code / CodeBit
 }
 
-func (e *ErrCode) Code() int {
-	return e.Err % CodeBit
+func (e *ErrCode) ErrorCode() int {
+	return e.Code % CodeBit
 }
 
-func (e *ErrCode) Message() string {
-	return e.Msg
+func (e *ErrCode) Msg() string {
+	return e.Message
 }
 
-func (e *ErrCode) WithMessage(msg string) {
-	e.Msg = msg
+func (e *ErrCode) WithMsg(msg string) {
+	e.Message = msg
 }
 
 var (
 	// 00~99为服务级别错误码
 
-	ErrInternalServerError = &ErrCode{Err: 50010000, Msg: "服务器内部错误"}
-	ErrInvalidParam        = &ErrCode{Err: 40010001, Msg: "请求参数不正确"}
-	ErrNotFound            = &ErrCode{Err: 40410002, Msg: "资源不存在"}
-	ErrMethodNotAllow      = &ErrCode{Err: 40510003, Msg: "方法不允许"}
+	ErrInternalServerError = &ErrCode{Code: 50010000, Message: "服务器内部错误"}
+	ErrInvalidParam        = &ErrCode{Code: 40010001, Message: "请求参数不正确"}
+	ErrNotFound            = &ErrCode{Code: 40410002, Message: "资源不存在"}
+	ErrMethodNotAllow      = &ErrCode{Code: 40510003, Message: "方法不允许"}
 )
 
 // AddCode business code to codeMessageBox
@@ -56,20 +57,20 @@ func AddCode(m map[ErrorCode]struct{}) error {
 		ErrNotFound:            {},
 		ErrMethodNotAllow:      {},
 	} {
-		code := errorCode.Code()
+		code := errorCode.ErrorCode()
 		value, ok := temp[code]
 		if ok {
 			return fmt.Errorf("error code %d(%s) already exists", code, value)
 		}
-		temp[code] = errorCode.Message()
+		temp[code] = errorCode.Msg()
 	}
 	for errorCode := range m {
-		code := errorCode.Code()
+		code := errorCode.ErrorCode()
 		value, ok := temp[code]
 		if ok {
 			return fmt.Errorf("error code %d(%s) already exists", code, value)
 		}
-		temp[code] = errorCode.Message()
+		temp[code] = errorCode.Msg()
 	}
 	return nil
 }
