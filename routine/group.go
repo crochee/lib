@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-type errGroup struct {
+type ErrGroup struct {
 	ctx       context.Context
 	err       error
 	cancel    context.CancelFunc
@@ -15,17 +15,17 @@ type errGroup struct {
 	errOnce   sync.Once
 }
 
-// NewGroup starts a recoverable goroutine errGroup with a context.
-func NewGroup(ctx context.Context) *errGroup {
+// NewGroup starts a recoverable goroutine ErrGroup with a context.
+func NewGroup(ctx context.Context) *ErrGroup {
 	newCtx, cancel := context.WithCancel(ctx)
-	return &errGroup{
+	return &ErrGroup{
 		ctx:    newCtx,
 		cancel: cancel,
 	}
 }
 
 // Go starts a recoverable goroutine with a context.
-func (e *errGroup) Go(goroutine func(context.Context) error) {
+func (e *ErrGroup) Go(goroutine func(context.Context) error) {
 	e.waitGroup.Add(1)
 	go func() {
 		var err error
@@ -45,7 +45,7 @@ func (e *errGroup) Go(goroutine func(context.Context) error) {
 	}()
 }
 
-func (e *errGroup) Wait() error {
+func (e *ErrGroup) Wait() error {
 	e.waitGroup.Wait()
 	e.errOnce.Do(e.cancel)
 	return e.err

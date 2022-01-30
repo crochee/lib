@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-type pool struct {
+type Pool struct {
 	waitGroup sync.WaitGroup
 	ctx       context.Context
 	cancel    context.CancelFunc
@@ -16,9 +16,9 @@ type pool struct {
 }
 
 // NewPool creates a Pool.
-func NewPool(parentCtx context.Context, opts ...func(*option)) *pool {
+func NewPool(parentCtx context.Context, opts ...func(*option)) *Pool {
 	ctx, cancel := context.WithCancel(parentCtx)
-	p := &pool{
+	p := &Pool{
 		ctx:    ctx,
 		cancel: cancel,
 		option: option{recoverFunc: defaultRecoverGoroutine},
@@ -30,7 +30,7 @@ func NewPool(parentCtx context.Context, opts ...func(*option)) *pool {
 }
 
 // Go starts a recoverable goroutine with a context.
-func (p *pool) Go(goroutine func(context.Context)) {
+func (p *Pool) Go(goroutine func(context.Context)) {
 	p.waitGroup.Add(1)
 	go func() {
 		defer func() {
@@ -45,8 +45,14 @@ func (p *pool) Go(goroutine func(context.Context)) {
 	}()
 }
 
+// Wait waits all started routines, waiting for their termination.
+func (p *Pool) Wait() {
+	p.waitGroup.Wait()
+	p.cancel()
+}
+
 // Stop stops all started routines, waiting for their termination.
-func (p *pool) Stop() {
+func (p *Pool) Stop() {
 	p.cancel()
 	p.waitGroup.Wait()
 }

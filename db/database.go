@@ -132,9 +132,9 @@ func getLevel(l string, debug bool) logger.LogLevel {
 		return logger.Info
 	}
 	switch l {
-	case log.INFO, log.DEBUG:
+	case log.DEBUG:
 		return logger.Info
-	case log.WARN:
+	case log.INFO, log.WARN:
 		return logger.Warn
 	case log.ERROR, log.DPanic, log.PANIC, log.FATAL:
 		return logger.Error

@@ -12,6 +12,11 @@ import (
 	"github.com/crochee/lirity/e"
 )
 
+type Validator interface {
+	ValidateStruct(obj interface{}) error
+	Engine() interface{}
+}
+
 // New validator
 func New() (*defaultValidator, error) {
 	v := &defaultValidator{Validate: validator.New()}
@@ -21,6 +26,12 @@ func New() (*defaultValidator, error) {
 		return nil, err
 	}
 	return v, nil
+}
+
+func NewValidator() Validator {
+	v := &defaultValidator{Validate: validator.New()}
+	v.Validate.SetTagName("binding")
+	return v
 }
 
 type defaultValidator struct {
@@ -88,4 +99,20 @@ func (v *defaultValidator) defaultValidateStruct(obj interface{}) error {
 	default:
 		return nil
 	}
+}
+
+func RegisterValidation(v Validator, tag string, fn validator.Func, callValidationEvenIfNull ...bool) error {
+	validate, ok := v.Engine().(*validator.Validate)
+	if !ok {
+		return nil
+	}
+	return validate.RegisterValidation(tag, fn, callValidationEvenIfNull...)
+}
+
+func Var(v Validator, field interface{}, tag string) error {
+	validate, ok := v.Engine().(*validator.Validate)
+	if !ok {
+		return nil
+	}
+	return validate.Var(field, tag)
 }
