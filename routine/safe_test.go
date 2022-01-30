@@ -53,7 +53,7 @@ func TestNewPool(t *testing.T) {
 	}
 	for _, data := range testList {
 		t.Run(data.name, func(t *testing.T) {
-			var p *pool
+			var p *Pool
 			if data.recover != nil {
 				p = NewPool(context.Background(), Recover(data.recover))
 			} else {
