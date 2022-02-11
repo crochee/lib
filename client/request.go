@@ -7,7 +7,7 @@ import (
 
 	"moul.io/http2curl"
 
-	"github.com/crochee/lirity/log"
+	"github.com/crochee/lirity/logger"
 )
 
 var DefaultClient Client = NewStandardClient()
@@ -42,9 +42,9 @@ func NewRequest(ctx context.Context, method string, uri string,
 	// 打印curl语句，便于问题分析和定位
 	var curl *http2curl.CurlCommand
 	if curl, err = http2curl.GetCurlCommand(req); err == nil {
-		log.FromContext(ctx).Debug(curl.String())
+		logger.From(ctx).Debug(curl.String())
 	} else {
-		log.FromContext(ctx).Error(err.Error())
+		logger.From(ctx).Error(err.Error())
 	}
 	return req, nil
 }
