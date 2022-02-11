@@ -3,7 +3,7 @@ package e
 import (
 	"encoding/json"
 	"fmt"
-	"io"
+	"net/http"
 
 	"github.com/json-iterator/go"
 )
@@ -28,14 +28,21 @@ type InnerError struct {
 	Result  interface{} `json:"result"`
 }
 
-func NewErrorCode(body io.Reader, statusCode int) ErrorCode {
-	decoder := jsoniter.ConfigCompatibleWithStandardLibrary.NewDecoder(body)
+func From(response *http.Response) ErrorCode {
+	decoder := jsoniter.ConfigCompatibleWithStandardLibrary.NewDecoder(response.Body)
 	decoder.UseNumber()
 	var result ErrCode
 	if err := decoder.Decode(&result); err != nil {
 		return ErrParseContent.WithResult(err)
 	}
-	return result.WithStatusCode(statusCode)
+	return result.WithStatusCode(response.StatusCode)
+}
+
+func Froze(code int, message string) ErrorCode {
+	return &ErrCode{
+		code: code,
+		msg:  message,
+	}
 }
 
 const codeBit = 100000
@@ -114,11 +121,11 @@ func (e *ErrCode) WithResult(result interface{}) ErrorCode {
 var (
 	// 00~99为服务级别错误码
 
-	ErrInternalServerError = &ErrCode{code: 50010000, msg: "服务器内部错误"}
-	ErrInvalidParam        = &ErrCode{code: 40010001, msg: "请求参数不正确"}
-	ErrNotFound            = &ErrCode{code: 40410002, msg: "资源不存在"}
-	ErrNotAllowMethod      = &ErrCode{code: 40510003, msg: "不允许此方法"}
-	ErrParseContent        = &ErrCode{code: 50010004, msg: "解析内容失败"}
+	ErrInternalServerError = Froze(50010000, "服务器内部错误")
+	ErrInvalidParam        = Froze(40010001, "请求参数不正确")
+	ErrNotFound            = Froze(40410002, "资源不存在")
+	ErrNotAllowMethod      = Froze(40510003, "不允许此方法")
+	ErrParseContent        = Froze(50010004, "解析内容失败")
 )
 
 // AddCode business code to codeMessageBox
