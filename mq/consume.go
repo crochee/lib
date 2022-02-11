@@ -8,11 +8,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/crochee/lirity/logger"
 	"sync"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-
-	"github.com/crochee/lirity/log"
 )
 
 type Consumer struct {
@@ -92,7 +91,7 @@ func (c *Consumer) Subscribe(ctx context.Context, topic string) (<-chan *message
 				nil,
 			)
 			if err != nil {
-				log.FromContext(ctx).Error(err.Error())
+				logger.From(ctx).Error(err.Error())
 				goto label
 			}
 			for {
@@ -100,11 +99,11 @@ func (c *Consumer) Subscribe(ctx context.Context, topic string) (<-chan *message
 				case d := <-deliveries:
 					msgStruct, err := c.marshal.Unmarshal(&d) // nolint:govet
 					if err != nil {
-						log.FromContext(ctx).Error(err.Error())
+						logger.From(ctx).Error(err.Error())
 						// 当requeue为true时，将该消息排队，以在另一个通道上传递给使用者。
 						// 当requeue为false或服务器无法将该消息排队时，它将被丢弃。
 						if err = d.Reject(false); err != nil {
-							log.FromContext(ctx).Error(err.Error())
+							logger.From(ctx).Error(err.Error())
 							goto label
 						}
 						continue
@@ -112,7 +111,7 @@ func (c *Consumer) Subscribe(ctx context.Context, topic string) (<-chan *message
 					// 手动确认收到本条消息, true表示回复当前信道所有未回复的ack，用于批量确认。
 					// false表示回复当前条目
 					if err = d.Ack(false); err != nil {
-						log.FromContext(ctx).Error(err.Error())
+						logger.From(ctx).Error(err.Error())
 						goto label
 					}
 					output <- msgStruct
@@ -120,7 +119,7 @@ func (c *Consumer) Subscribe(ctx context.Context, topic string) (<-chan *message
 					close(output)
 					c.wg.Done()
 					if err = channel.Close(); err != nil {
-						log.FromContext(ctx).Error(err.Error())
+						logger.From(ctx).Error(err.Error())
 					}
 					return
 				}

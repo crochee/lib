@@ -7,7 +7,7 @@ import (
 	"github.com/json-iterator/go"
 	"github.com/streadway/amqp"
 
-	"github.com/crochee/lirity/log"
+	"github.com/crochee/lirity/logger"
 	"github.com/crochee/lirity/mq"
 	"github.com/crochee/lirity/routine"
 	"github.com/crochee/lirity/validator"
@@ -17,7 +17,7 @@ func NewTaskConsumer(ctx context.Context, opts ...func(*ConsumerOption)) *taskCo
 	t := &taskConsumer{
 		ConsumerOption: ConsumerOption{
 			Pool: routine.NewPool(ctx, routine.Recover(func(ctx context.Context, i interface{}) {
-				log.FromContext(ctx).Errorf("%v", i)
+				logger.From(ctx).Sugar().Errorf("%v", i)
 			})),
 			Manager:     NewManager(),
 			Marshal:     mq.DefaultMarshal{},
@@ -73,7 +73,7 @@ func (t *taskConsumer) Subscribe(channel Channel, queueName string) error {
 				nil,
 			)
 			if err != nil {
-				log.FromContext(ctx).Error(err.Error())
+				logger.From(ctx).Error(err.Error())
 				fmt.Println(err)
 				continue
 			}
@@ -92,7 +92,7 @@ func (t *taskConsumer) handleMessage(ctx context.Context, deliveries <-chan amqp
 		case v := <-deliveries:
 			t.Pool.Go(func(ctx context.Context) {
 				if err := t.handle(ctx, v); err != nil {
-					log.FromContext(ctx).Error(err.Error())
+					logger.From(ctx).Error(err.Error())
 				}
 			})
 		}
@@ -102,7 +102,7 @@ func (t *taskConsumer) handleMessage(ctx context.Context, deliveries <-chan amqp
 func (t *taskConsumer) handle(ctx context.Context, d amqp.Delivery) error {
 	msgStruct, err := t.Marshal.Unmarshal(&d)
 	if err != nil {
-		log.FromContext(ctx).Error(err.Error())
+		logger.From(ctx).Error(err.Error())
 		// 当requeue为true时，将该消息排队，以在另一个通道上传递给使用者。
 		// 当requeue为false或服务器无法将该消息排队时，它将被丢弃。
 		if err = d.Reject(false); err != nil {
@@ -110,10 +110,10 @@ func (t *taskConsumer) handle(ctx context.Context, d amqp.Delivery) error {
 		}
 		return nil
 	}
-	log.FromContext(ctx).Infof("consume uuid %s body:%s", msgStruct.UUID, msgStruct.Payload)
+	logger.From(ctx).Sugar().Infof("consume uuid %s body:%s", msgStruct.UUID, msgStruct.Payload)
 	param := t.ParamPool.Get()
 	if err = t.JSONHandler.Unmarshal(msgStruct.Payload, param); err != nil {
-		log.FromContext(ctx).Error(err.Error())
+		logger.From(ctx).Error(err.Error())
 		// 当requeue为true时，将该消息排队，以在另一个通道上传递给使用者。
 		// 当requeue为false或服务器无法将该消息排队时，它将被丢弃。
 		if err = d.Reject(false); err != nil {
@@ -122,7 +122,7 @@ func (t *taskConsumer) handle(ctx context.Context, d amqp.Delivery) error {
 		return nil
 	}
 	if err = t.Validator.ValidateStruct(param); err != nil {
-		log.FromContext(ctx).Error(err.Error())
+		logger.From(ctx).Error(err.Error())
 		// 当requeue为true时，将该消息排队，以在另一个通道上传递给使用者。
 		// 当requeue为false或服务器无法将该消息排队时，它将被丢弃。
 		if err = d.Reject(false); err != nil {
@@ -133,7 +133,7 @@ func (t *taskConsumer) handle(ctx context.Context, d amqp.Delivery) error {
 	err = t.Manager.Run(ctx, param)
 	t.ParamPool.Put(param)
 	if err != nil {
-		log.FromContext(ctx).Error(err.Error())
+		logger.From(ctx).Error(err.Error())
 		// 当requeue为true时，将该消息排队，以在另一个通道上传递给使用者。
 		// 当requeue为false或服务器无法将该消息排队时，它将被丢弃。
 		if err = d.Reject(false); err != nil {

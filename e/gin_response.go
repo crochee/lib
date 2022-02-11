@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/crochee/lirity/log"
+	"github.com/crochee/lirity/logger"
 )
 
 // GinErrorCode gin response with ErrorCode
@@ -16,7 +16,7 @@ func GinErrorCode(c *gin.Context, code ErrorCode) {
 
 // GinError gin Response with error
 func GinError(c *gin.Context, err error) {
-	log.FromContext(c.Request.Context()).Errorf("%+v", err)
+	logger.From(c.Request.Context()).Sugar().Errorf("%+v", err)
 	for err != nil {
 		wrapper, ok := err.(UnwrapHandle)
 		if !ok {

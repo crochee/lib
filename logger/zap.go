@@ -1,7 +1,7 @@
-package log
+package logger
 
 import (
-	"io"
+	"os"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -17,16 +17,23 @@ const (
 	FATAL  = "FATAL"
 )
 
-type encoder func(zapcore.EncoderConfig) zapcore.Encoder
+func New(opts ...Option) *zap.Logger {
+	o := &option{
+		level:   zapcore.InfoLevel,
+		encoder: NewConsoleEncoder,
+		writer:  os.Stdout,
+	}
+	for _, opt := range opts {
+		opt(o)
+	}
 
-func newZap(level string, encoderFunc encoder, skip int, w io.Writer, fields ...zap.Field) *zap.Logger {
 	core := zapcore.NewCore(
-		encoderFunc(newEncoderConfig()),
-		zap.CombineWriteSyncers(zapcore.AddSync(w)),
-		newLevel(level),
-	).With(fields) // 自带node 信息
+		o.encoder(newEncoderConfig()),
+		zap.CombineWriteSyncers(zapcore.AddSync(o.writer)),
+		o.level,
+	).With(o.fields) // 自带node 信息
 	// 大于error增加堆栈信息
-	return zap.New(core).WithOptions(zap.AddCaller(), zap.AddCallerSkip(skip),
+	return zap.New(core).WithOptions(zap.AddCaller(), zap.AddCallerSkip(o.skip),
 		zap.AddStacktrace(zapcore.DPanicLevel))
 }
 

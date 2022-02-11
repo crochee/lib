@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"gorm.io/gorm/logger"
+	"go.uber.org/zap"
+	glogger "gorm.io/gorm/logger"
 	"gorm.io/gorm/utils"
-
-	"github.com/crochee/lirity/log"
 )
 
-func NewLog(l log.Interface, cfg logger.Config) logger.Interface {
+func NewLog(l *zap.Logger, cfg glogger.Config) glogger.Interface {
 	var (
 		infoStr      = "%s\n[info] "
 		warnStr      = "%s\n[warn] "
@@ -22,18 +21,18 @@ func NewLog(l log.Interface, cfg logger.Config) logger.Interface {
 	)
 
 	if cfg.Colorful {
-		infoStr = logger.Green + "%s\n" + logger.Reset + logger.Green + "[info] " + logger.Reset
-		warnStr = logger.BlueBold + "%s\n" + logger.Reset + logger.Magenta + "[warn] " + logger.Reset
-		errStr = logger.Magenta + "%s\n" + logger.Reset + logger.Red + "[error] " + logger.Reset
-		traceStr = logger.Green + "%s\n" + logger.Reset + logger.Yellow + "[%.3fms] " + logger.BlueBold +
-			"[rows:%v]" + logger.Reset + " %s"
-		traceWarnStr = logger.Green + "%s " + logger.Yellow + "%s\n" + logger.Reset + logger.RedBold + "[%.3fms] " +
-			logger.Yellow + "[rows:%v]" + logger.Magenta + " %s" + logger.Reset
-		traceErrStr = logger.RedBold + "%s " + logger.MagentaBold + "%s\n" + logger.Reset + logger.Yellow +
-			"[%.3fms] " + logger.BlueBold + "[rows:%v]" + logger.Reset + " %s"
+		infoStr = glogger.Green + "%s\n" + glogger.Reset + glogger.Green + "[info] " + glogger.Reset
+		warnStr = glogger.BlueBold + "%s\n" + glogger.Reset + glogger.Magenta + "[warn] " + glogger.Reset
+		errStr = glogger.Magenta + "%s\n" + glogger.Reset + glogger.Red + "[error] " + glogger.Reset
+		traceStr = glogger.Green + "%s\n" + glogger.Reset + glogger.Yellow + "[%.3fms] " + glogger.BlueBold +
+			"[rows:%v]" + glogger.Reset + " %s"
+		traceWarnStr = glogger.Green + "%s " + glogger.Yellow + "%s\n" + glogger.Reset + glogger.RedBold + "[%.3fms] " +
+			glogger.Yellow + "[rows:%v]" + glogger.Magenta + " %s" + glogger.Reset
+		traceErrStr = glogger.RedBold + "%s " + glogger.MagentaBold + "%s\n" + glogger.Reset + glogger.Yellow +
+			"[%.3fms] " + glogger.BlueBold + "[rows:%v]" + glogger.Reset + " %s"
 	}
 	return &Log{
-		Interface:    l,
+		logger:       l,
 		Config:       cfg,
 		infoStr:      infoStr,
 		warnStr:      warnStr,
@@ -45,69 +44,74 @@ func NewLog(l log.Interface, cfg logger.Config) logger.Interface {
 }
 
 type Log struct {
-	log.Interface
-	logger.Config
+	logger *zap.Logger
+	glogger.Config
 	infoStr, warnStr, errStr            string
 	traceStr, traceErrStr, traceWarnStr string
 }
 
-func (l *Log) LogMode(level logger.LogLevel) logger.Interface {
-	l.LogLevel = level
-	return l
+func (l *Log) LogMode(level glogger.LogLevel) glogger.Interface {
+	log := *l
+	log.LogLevel = level
+	return &log
 }
 
 func (l *Log) Info(_ context.Context, msg string, data ...interface{}) {
-	if l.LogLevel >= logger.Info {
-		l.Interface.Infof(l.infoStr+msg, append([]interface{}{utils.FileWithLineNum()}, data...)...)
+	if l.LogLevel < glogger.Info {
+		return
 	}
+	l.logger.Sugar().Infof(l.infoStr+msg, append([]interface{}{utils.FileWithLineNum()}, data...)...)
 }
 
 func (l *Log) Warn(_ context.Context, msg string, data ...interface{}) {
-	if l.LogLevel >= logger.Warn {
-		l.Interface.Warnf(l.infoStr+msg, append([]interface{}{utils.FileWithLineNum()}, data...)...)
+	if l.LogLevel < glogger.Warn {
+		return
 	}
+	l.logger.Sugar().Warnf(l.infoStr+msg, append([]interface{}{utils.FileWithLineNum()}, data...)...)
+
 }
 
 func (l *Log) Error(_ context.Context, msg string, data ...interface{}) {
-	if l.LogLevel >= logger.Error {
-		l.Interface.Errorf(l.infoStr+msg, append([]interface{}{utils.FileWithLineNum()}, data...)...)
+	if l.LogLevel < glogger.Error {
+		return
 	}
+	l.logger.Sugar().Errorf(l.infoStr+msg, append([]interface{}{utils.FileWithLineNum()}, data...)...)
 }
 
 const NanosecondPerMillisecond = 1e6
 
 func (l *Log) Trace(_ context.Context, begin time.Time, fc func() (string, int64), err error) {
-	if l.LogLevel <= logger.Silent {
+	if l.LogLevel <= glogger.Silent {
 		return
 	}
 	elapsed := time.Since(begin)
 	switch {
-	case err != nil && l.LogLevel >= logger.Error:
+	case err != nil && l.LogLevel >= glogger.Error:
 		s, rows := fc()
 		if rows == -1 {
-			l.Interface.Errorf(l.traceErrStr, utils.FileWithLineNum(), err,
+			l.logger.Sugar().Errorf(l.traceErrStr, utils.FileWithLineNum(), err,
 				float64(elapsed.Nanoseconds())/NanosecondPerMillisecond, "-", s)
 		} else {
-			l.Interface.Errorf(l.traceErrStr, utils.FileWithLineNum(), err,
+			l.logger.Sugar().Errorf(l.traceErrStr, utils.FileWithLineNum(), err,
 				float64(elapsed.Nanoseconds())/NanosecondPerMillisecond, rows, s)
 		}
-	case elapsed > l.SlowThreshold && l.SlowThreshold != 0 && l.LogLevel >= logger.Warn:
+	case elapsed > l.SlowThreshold && l.SlowThreshold != 0 && l.LogLevel >= glogger.Warn:
 		s, rows := fc()
 		slowLog := fmt.Sprintf("SLOW SQL >= %v", l.SlowThreshold)
 		if rows == -1 {
-			l.Interface.Warnf(l.traceWarnStr, utils.FileWithLineNum(), slowLog,
+			l.logger.Sugar().Warnf(l.traceWarnStr, utils.FileWithLineNum(), slowLog,
 				float64(elapsed.Nanoseconds())/NanosecondPerMillisecond, "-", s)
 		} else {
-			l.Interface.Warnf(l.traceWarnStr, utils.FileWithLineNum(), slowLog,
+			l.logger.Sugar().Warnf(l.traceWarnStr, utils.FileWithLineNum(), slowLog,
 				float64(elapsed.Nanoseconds())/NanosecondPerMillisecond, rows, s)
 		}
-	case l.LogLevel == logger.Info:
+	case l.LogLevel == glogger.Info:
 		s, rows := fc()
 		if rows == -1 {
-			l.Interface.Infof(l.traceStr, utils.FileWithLineNum(),
+			l.logger.Sugar().Infof(l.traceStr, utils.FileWithLineNum(),
 				float64(elapsed.Nanoseconds())/NanosecondPerMillisecond, "-", s)
 		} else {
-			l.Interface.Infof(l.traceStr, utils.FileWithLineNum(),
+			l.logger.Sugar().Infof(l.traceStr, utils.FileWithLineNum(),
 				float64(elapsed.Nanoseconds())/NanosecondPerMillisecond, rows, s)
 		}
 	}

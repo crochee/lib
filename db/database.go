@@ -9,11 +9,11 @@ import (
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	glogger "gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
 
 	"github.com/crochee/lirity"
-	"github.com/crochee/lirity/log"
+	"github.com/crochee/lirity/logger"
 )
 
 var (
@@ -63,7 +63,7 @@ func NewClient(ctx context.Context, opts ...func(*Option)) (*DB, error) {
 	}
 	session := &gorm.Session{Context: ctx}
 	if c.Debug { // 是否显示sql语句
-		session.Logger = client.Logger.LogMode(logger.Info)
+		session.Logger = client.Logger.LogMode(glogger.Info)
 	}
 	client = client.Session(session)
 
@@ -83,34 +83,29 @@ type DB struct {
 	debug bool
 }
 
-// WithContext gets logger to set orm logger
-func (d *DB) WithContext(ctx context.Context) *DB {
-	return d.With(ctx)
-}
-
-type SessionOpt struct {
+type SessionOption struct {
 	SlowThreshold time.Duration
 	Colorful      bool
-	LevelFunc     func(string, bool) logger.LogLevel
+	LevelFunc     func(glogger.LogLevel, bool) glogger.LogLevel
 }
 
 // With options to set orm logger
-func (d *DB) With(ctx context.Context, opts ...func(*SessionOpt)) *DB {
-	fromContextLog := log.FromContext(ctx)
-	option := SessionOpt{
+func (d *DB) With(ctx context.Context, opts ...func(*SessionOption)) *DB {
+	log := logger.From(ctx)
+	option := &SessionOption{
 		SlowThreshold: 10 * time.Second,
 		Colorful:      false,
 		LevelFunc:     getLevel,
 	}
 	for _, opt := range opts {
-		opt(&option)
+		opt(option)
 	}
 	return &DB{DB: d.Session(&gorm.Session{
 		Context: ctx,
-		Logger: NewLog(fromContextLog, logger.Config{
+		Logger: NewLog(log, glogger.Config{
 			SlowThreshold: option.SlowThreshold,
 			Colorful:      option.Colorful,
-			LogLevel:      option.LevelFunc(fromContextLog.Opt().Level, d.debug),
+			LogLevel:      option.LevelFunc(glogger.Warn, d.debug),
 		}),
 	}),
 		debug: d.debug,
@@ -127,20 +122,11 @@ func (d *DB) Close() error {
 	return nil
 }
 
-func getLevel(l string, debug bool) logger.LogLevel {
+func getLevel(l glogger.LogLevel, debug bool) glogger.LogLevel {
 	if debug {
-		return logger.Info
+		return glogger.Info
 	}
-	switch l {
-	case log.DEBUG:
-		return logger.Info
-	case log.INFO, log.WARN:
-		return logger.Warn
-	case log.ERROR, log.DPanic, log.PANIC, log.FATAL:
-		return logger.Error
-	default:
-		return logger.Silent
-	}
+	return l
 }
 
 func dsn(opt *Option) string {
