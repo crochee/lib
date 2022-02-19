@@ -1,15 +1,14 @@
 package validator
 
 import (
-	"errors"
 	"reflect"
 
 	"github.com/go-playground/locales/zh"
 	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
 	translations "github.com/go-playground/validator/v10/translations/zh"
-
-	"github.com/crochee/lirity/e"
+	"github.com/pkg/errors"
+	"go.uber.org/multierr"
 )
 
 type Validator interface {
@@ -54,9 +53,9 @@ func (v *defaultValidator) Translate(err error) error {
 	if !errors.As(err, &vErrs) {
 		return err
 	}
-	var errs e.Errors
+	var errs error
 	for _, s := range vErrs.Translate(v.translator) {
-		errs = append(errs, errors.New(s))
+		errs = multierr.Append(errs, errors.New(s))
 	}
 	return errs
 }
@@ -86,16 +85,13 @@ func (v *defaultValidator) defaultValidateStruct(obj interface{}) error {
 		return v.validateStruct(obj)
 	case reflect.Slice, reflect.Array:
 		count := value.Len()
-		validateRet := make(e.Errors, 0, count)
+		var errs error
 		for i := 0; i < count; i++ {
 			if err := v.ValidateStruct(value.Index(i).Interface()); err != nil {
-				validateRet = append(validateRet, err)
+				errs = multierr.Append(errs, err)
 			}
 		}
-		if len(validateRet) == 0 {
-			return nil
-		}
-		return validateRet
+		return errs
 	default:
 		return nil
 	}
