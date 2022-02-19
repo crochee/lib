@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/streadway/amqp"
+	"go.uber.org/multierr"
 
-	"github.com/crochee/lirity/e"
 	"github.com/crochee/lirity/mq"
 )
 
@@ -64,12 +64,12 @@ func (r *rabbitmqChannel) Consume(queue, consumer string, autoAck, exclusive, no
 }
 
 func (r *rabbitmqChannel) Close() error {
-	var errs e.Errors
+	var errs error
 	if err := r.channel.Close(); err != nil {
-		errs = append(errs, err)
+		errs = multierr.Append(errs, err)
 	}
 	if err := r.client.Close(); err != nil {
-		errs = append(errs, err)
+		errs = multierr.Append(errs, err)
 	}
 	return errs
 }
