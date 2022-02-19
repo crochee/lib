@@ -12,13 +12,23 @@ import (
 	"github.com/streadway/amqp"
 )
 
-type Option struct {
-	Config     *amqp.Config
-	URI        string
-	Marshal    MarshalAPI
-	QueueName  func(topic string) string
-	Exchange   string
-	RoutingKey string
+type option struct {
+	config *amqp.Config
+	URI    string
+}
+
+type Option func(*option)
+
+func WithURI(uri string) Option {
+	return func(o *option) {
+		o.URI = uri
+	}
+}
+
+func WithConfig(cfg *amqp.Config) Option {
+	return func(o *option) {
+		o.config = cfg
+	}
 }
 
 type Client struct {
@@ -27,19 +37,19 @@ type Client struct {
 }
 
 // New create a mq client
-func New(opts ...func(*Option)) (*Client, error) {
-	option := Option{
+func New(opts ...Option) (*Client, error) {
+	o := &option{
 		URI: "amqp://guest:guest@localhost:5672/",
 	}
 	for _, opt := range opts {
-		opt(&option)
+		opt(o)
 	}
 	r := &Client{}
 	var err error
-	if option.Config == nil {
-		r.Connection, err = amqp.Dial(option.URI)
+	if o.config == nil {
+		r.Connection, err = amqp.Dial(o.URI)
 	} else {
-		r.Connection, err = amqp.DialConfig(option.URI, *option.Config)
+		r.Connection, err = amqp.DialConfig(o.URI, *o.config)
 	}
 	if err != nil {
 		return nil, err

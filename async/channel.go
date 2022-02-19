@@ -18,7 +18,7 @@ type Channel interface {
 	Close() error
 }
 
-func NewRabbitmqChannel(opts ...func(*mq.Option)) (Channel, error) {
+func NewRabbitmqChannel(opts ...mq.Option) (Channel, error) {
 	client, err := mq.New(opts...)
 	if err != nil {
 		return nil, err
