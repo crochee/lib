@@ -7,13 +7,13 @@ import (
 )
 
 type structCustomValidation struct {
-	Order string `binding:"order"`
+	Order string `binding:"sort"`
 }
 
-func TestOrderWithDBSort(t *testing.T) {
+func TestSort(t *testing.T) {
 	engine, err := New()
 	assert.Nil(t, err)
-	err = RegisterValidation(engine, "order", OrderWithDBSort)
+	err = RegisterValidation(engine, "sort", Sort)
 	assert.Nil(t, err)
 
 	type args struct {
