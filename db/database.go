@@ -41,13 +41,13 @@ type Option struct {
 	ConnMaxLifetime time.Duration
 }
 
-// NewClient with context.Context returns DB
-func NewClient(ctx context.Context, opts ...func(*Option)) (*DB, error) {
-	var c Option
+// New with context.Context returns DB
+func New(ctx context.Context, opts ...func(*Option)) (*DB, error) {
+	var o Option
 	for _, opt := range opts {
-		opt(&c)
+		opt(&o)
 	}
-	client, err := gorm.Open(mysql.Open(dsn(&c)),
+	client, err := gorm.Open(mysql.Open(Dsn(&o)),
 		&gorm.Config{
 			PrepareStmt: true,
 			NamingStrategy: schema.NamingStrategy{
@@ -62,7 +62,7 @@ func NewClient(ctx context.Context, opts ...func(*Option)) (*DB, error) {
 		return nil, err
 	}
 	session := &gorm.Session{Context: ctx}
-	if c.Debug { // 是否显示sql语句
+	if o.Debug { // 是否显示sql语句
 		session.Logger = client.Logger.LogMode(glogger.Info)
 	}
 	client = client.Session(session)
@@ -72,10 +72,10 @@ func NewClient(ctx context.Context, opts ...func(*Option)) (*DB, error) {
 		return nil, err
 	}
 	// 连接池配置
-	sqlDB.SetMaxOpenConns(c.MaxOpenConn)        // 默认值0，无限制
-	sqlDB.SetMaxIdleConns(c.MaxIdleConn)        // 默认值2
-	sqlDB.SetConnMaxLifetime(c.ConnMaxLifetime) // 默认值0，永不过期
-	return &DB{DB: client, debug: c.Debug}, nil
+	sqlDB.SetMaxOpenConns(o.MaxOpenConn)        // 默认值0，无限制
+	sqlDB.SetMaxIdleConns(o.MaxIdleConn)        // 默认值2
+	sqlDB.SetConnMaxLifetime(o.ConnMaxLifetime) // 默认值0，永不过期
+	return &DB{DB: client, debug: o.Debug}, nil
 }
 
 type DB struct {
@@ -92,20 +92,20 @@ type SessionOption struct {
 // With options to set orm logger
 func (d *DB) With(ctx context.Context, opts ...func(*SessionOption)) *DB {
 	log := logger.From(ctx)
-	option := &SessionOption{
+	o := &SessionOption{
 		SlowThreshold: 10 * time.Second,
 		Colorful:      false,
 		LevelFunc:     getLevel,
 	}
 	for _, opt := range opts {
-		opt(option)
+		opt(o)
 	}
 	return &DB{DB: d.Session(&gorm.Session{
 		Context: ctx,
 		Logger: NewLog(log, glogger.Config{
-			SlowThreshold: option.SlowThreshold,
-			Colorful:      option.Colorful,
-			LogLevel:      option.LevelFunc(glogger.Warn, d.debug),
+			SlowThreshold: o.SlowThreshold,
+			Colorful:      o.Colorful,
+			LogLevel:      o.LevelFunc(glogger.Warn, d.debug),
 		}),
 	}),
 		debug: d.debug,
@@ -129,7 +129,7 @@ func getLevel(l glogger.LogLevel, debug bool) glogger.LogLevel {
 	return l
 }
 
-func dsn(opt *Option) string {
+func Dsn(opt *Option) string {
 	uri := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=%s&parseTime=%t&loc=%s",
 		opt.User, opt.Password, opt.IP, opt.Port, opt.Database, opt.Charset, true, "UTC")
 	if opt.Timeout != 0 {
