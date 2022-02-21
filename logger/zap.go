@@ -26,6 +26,7 @@ func New(opts ...Option) *zap.Logger {
 	for _, opt := range opts {
 		opt(o)
 	}
+	//zapcore.NewConsoleEncoder()
 
 	core := zapcore.NewCore(
 		o.encoder(newEncoderConfig()),
