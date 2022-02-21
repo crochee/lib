@@ -67,6 +67,8 @@ func (p *Pagination) Build(_ context.Context, query *gorm.DB, _ ...BuilderOption
 		}
 		p.Offset = (p.Page - 1) * p.Limit
 	}
+	p.Page = p.Offset/p.Limit + 1
+	p.Size = p.Limit
 	return query.Limit(p.Limit).Offset(p.Offset)
 }
 
