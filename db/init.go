@@ -16,7 +16,9 @@ var c *DB
 
 // Init init database
 func Init(ctx context.Context, opts ...func(*Option)) (err error) {
-	c, err = New(ctx, opts...)
+	if c, err = New(ctx, opts...); err != nil {
+		return
+	}
 	runtime.SetFinalizer(c, ClientClose)
 	return
 }
