@@ -27,6 +27,9 @@ func With(ctx context.Context, opts ...func(*SessionOption)) *DB {
 }
 
 func ClientClose(db *DB) {
+	if db == nil {
+		return
+	}
 	lirity.Close(db)
 }
 

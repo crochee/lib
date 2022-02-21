@@ -46,24 +46,28 @@ func (s *Sort) Build(_ context.Context, query *gorm.DB, _ ...SqlBuilderOption) *
 
 // Pagination 分页
 type Pagination struct {
-	PageNum  int   `form:"page_num" json:"page_num" binding:"omitempty,min=0"`
-	PageSize int   `form:"page_size" json:"page_size" binding:"omitempty,min=-1"`
-	Total    int64 `json:"total"`
+	Page   int   `form:"page" json:"page" binding:"omitempty,min=0"`
+	Size   int   `form:"size" json:"size" binding:"omitempty,min=-1"`
+	Offset int   `json:"-" form:"offset"`
+	Limit  int   `json:"-" form:"limit"`
+	Total  int64 `json:"total"`
 }
 
 func (p *Pagination) Build(_ context.Context, query *gorm.DB, _ ...SqlBuilderOption) *gorm.DB {
 	query.Count(&p.Total)
-	// -1表示全量查询
-	if p.PageSize == -1 {
-		return query
+	if p.Limit == 0 {
+		if p.Size == 0 {
+			p.Size = variable.DefaultPageSize
+		}
+		p.Limit = p.Size
 	}
-	if p.PageNum == 0 {
-		p.PageNum = variable.DefaultPageNum
+	if p.Offset == 0 {
+		if p.Page == 0 {
+			p.Page = variable.DefaultPageNum
+		}
+		p.Offset = (p.Page - 1) * p.Limit
 	}
-	if p.PageSize == 0 {
-		p.PageSize = variable.DefaultPageSize
-	}
-	return query.Limit(p.PageSize).Offset((p.PageNum - 1) * p.PageSize)
+	return query.Limit(p.Limit).Offset(p.Offset)
 }
 
 type Primary struct {
