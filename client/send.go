@@ -3,10 +3,11 @@ package client
 import (
 	"context"
 	"fmt"
-	"github.com/crochee/lirity/e"
-	jsoniter "github.com/json-iterator/go"
 	"net/http"
 	"net/url"
+
+	"github.com/crochee/lirity/e"
+	jsoniter "github.com/json-iterator/go"
 )
 
 type clientHandler struct {
@@ -15,7 +16,8 @@ type clientHandler struct {
 	handler URLHandler
 }
 
-func (h clientHandler) Send(ctx context.Context, method string, uri string, value url.Values, header http.Header, request interface{}, response interface{}, wantStatusCode int, responseCode e.ErrorCode) error {
+func (h clientHandler) Send(ctx context.Context, method, uri string, value url.Values, header http.Header,
+	request, response interface{}, wantStatusCode int, responseCode e.ErrorCode) error {
 	var (
 		body []byte
 		err  error
@@ -36,7 +38,7 @@ func (h clientHandler) Send(ctx context.Context, method string, uri string, valu
 	defer httpResponse.Body.Close()
 	if httpResponse.StatusCode != wantStatusCode {
 		if err = h.api.NewDecoder(httpResponse.Body).Decode(responseCode); err != nil {
-			return fmt.Errorf("http code %d,but not 200,%w", httpResponse.StatusCode, wantStatusCode, err)
+			return fmt.Errorf("http code %d,but not %d,%w", httpResponse.StatusCode, wantStatusCode, err)
 		}
 		return responseCode
 	}
@@ -46,7 +48,8 @@ func (h clientHandler) Send(ctx context.Context, method string, uri string, valu
 	return h.api.NewDecoder(httpResponse.Body).Decode(response)
 }
 
-func (h clientHandler) Get(ctx context.Context, uri string, value url.Values, header http.Header, response interface{}, wantStatusCode int, responseCode e.ErrorCode) error {
+func (h clientHandler) Get(ctx context.Context, uri string, value url.Values, header http.Header,
+	response interface{}, wantStatusCode int, responseCode e.ErrorCode) error {
 	return h.Send(ctx, http.MethodGet, uri, value, header, nil, response, wantStatusCode, responseCode)
 }
 

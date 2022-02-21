@@ -36,7 +36,7 @@ func ClientClose(db *DB) {
 // Mock new a mock 解除测试对数据库等中间件的依赖
 func Mock() (sqlmock.Sqlmock, error) {
 	// 创建sqlmock
-	slqDb, mock, err := sqlmock.New()
+	slqDB, mock, err := sqlmock.New()
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +44,7 @@ func Mock() (sqlmock.Sqlmock, error) {
 	var client *gorm.DB
 	if client, err = gorm.Open(mysql.New(mysql.Config{
 		SkipInitializeWithVersion: true,
-		Conn:                      slqDb,
+		Conn:                      slqDB,
 	}), &gorm.Config{
 		NamingStrategy: schema.NamingStrategy{
 			SingularTable: true, // 不考虑表名单复数变化

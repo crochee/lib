@@ -6,6 +6,11 @@ import (
 	jsoniter "github.com/json-iterator/go"
 )
 
+// Register registers extension to jsoniter.API
+func Register(api jsoniter.API) {
+	api.RegisterExtension(&u64AsStringCodec{})
+}
+
 type funcEncoder struct {
 	fun jsoniter.EncoderFunc
 }

@@ -10,14 +10,14 @@ import (
 	"github.com/crochee/lirity/variable"
 )
 
-type sqlBuilderOption struct {
+type builderOption struct {
 }
 
-type SqlBuilderOption func(*sqlBuilderOption)
+type BuilderOption func(*builderOption)
 
-// SqlBuilder 将参数组装成 gorm.DB 即预处理的sql语句
-type SqlBuilder interface {
-	Build(ctx context.Context, query *gorm.DB, opts ...SqlBuilderOption) *gorm.DB
+// SQLBuilder 将参数组装成 gorm.DB 即预处理的sql语句
+type SQLBuilder interface {
+	Build(ctx context.Context, query *gorm.DB, opts ...BuilderOption) *gorm.DB
 }
 
 // Sort 排序
@@ -26,7 +26,7 @@ type Sort struct {
 	SortField string `form:"sort" json:"sort" binding:"omitempty,order"`
 }
 
-func (s *Sort) Build(_ context.Context, query *gorm.DB, _ ...SqlBuilderOption) *gorm.DB {
+func (s *Sort) Build(_ context.Context, query *gorm.DB, _ ...BuilderOption) *gorm.DB {
 	// SortField 给多个字段排序
 	// created_at, id asc => order by created_at desc, id asc
 	if s.SortField != "" {
@@ -53,7 +53,7 @@ type Pagination struct {
 	Total  int64 `json:"total"`
 }
 
-func (p *Pagination) Build(_ context.Context, query *gorm.DB, _ ...SqlBuilderOption) *gorm.DB {
+func (p *Pagination) Build(_ context.Context, query *gorm.DB, _ ...BuilderOption) *gorm.DB {
 	query.Count(&p.Total)
 	if p.Limit == 0 {
 		if p.Size == 0 {
@@ -75,7 +75,7 @@ type Primary struct {
 	Pagination
 }
 
-func (p *Primary) Build(ctx context.Context, query *gorm.DB, opts ...SqlBuilderOption) *gorm.DB {
+func (p *Primary) Build(ctx context.Context, query *gorm.DB, opts ...BuilderOption) *gorm.DB {
 	query = p.Sort.Build(ctx, query, opts...)
 	return p.Pagination.Build(ctx, query, opts...)
 }

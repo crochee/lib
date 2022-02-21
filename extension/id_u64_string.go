@@ -9,10 +9,6 @@ import (
 	"github.com/json-iterator/go"
 )
 
-func init() {
-	jsoniter.ConfigCompatibleWithStandardLibrary.RegisterExtension(&u64AsStringCodec{})
-}
-
 type u64AsStringCodec struct {
 	jsoniter.DummyExtension
 }

@@ -99,13 +99,14 @@ func (t *taskConsumer) handleMessage(ctx context.Context, deliveries <-chan amqp
 	}
 }
 
+// nolint:gocritic
 func (t *taskConsumer) handle(ctx context.Context, d amqp.Delivery) error {
 	msgStruct, err := t.Marshal.Unmarshal(&d)
 	if err != nil {
 		logger.From(ctx).Error(err.Error())
 		// 当requeue为true时，将该消息排队，以在另一个通道上传递给使用者。
 		// 当requeue为false或服务器无法将该消息排队时，它将被丢弃。
-		if err = d.Reject(false); err != nil {
+		if err = d.Reject(false); err != nil { // nolint:gocritic
 			return err
 		}
 		return nil
@@ -116,7 +117,7 @@ func (t *taskConsumer) handle(ctx context.Context, d amqp.Delivery) error {
 		logger.From(ctx).Error(err.Error())
 		// 当requeue为true时，将该消息排队，以在另一个通道上传递给使用者。
 		// 当requeue为false或服务器无法将该消息排队时，它将被丢弃。
-		if err = d.Reject(false); err != nil {
+		if err = d.Reject(false); err != nil { // nolint:gocritic
 			return err
 		}
 		return nil
@@ -125,7 +126,7 @@ func (t *taskConsumer) handle(ctx context.Context, d amqp.Delivery) error {
 		logger.From(ctx).Error(err.Error())
 		// 当requeue为true时，将该消息排队，以在另一个通道上传递给使用者。
 		// 当requeue为false或服务器无法将该消息排队时，它将被丢弃。
-		if err = d.Reject(false); err != nil {
+		if err = d.Reject(false); err != nil { // nolint:gocritic
 			return err
 		}
 		return nil
