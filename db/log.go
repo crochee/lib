@@ -68,7 +68,6 @@ func (l *Log) Warn(_ context.Context, msg string, data ...interface{}) {
 		return
 	}
 	l.logger.Sugar().Warnf(l.infoStr+msg, append([]interface{}{utils.FileWithLineNum()}, data...)...)
-
 }
 
 func (l *Log) Error(_ context.Context, msg string, data ...interface{}) {

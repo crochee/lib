@@ -41,11 +41,13 @@ type rabbitmqChannel struct {
 	channel *amqp.Channel
 }
 
+// nolint:gocritic
 func (r *rabbitmqChannel) Publish(exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error {
 	return r.channel.Publish(exchange, key, mandatory, immediate, msg)
 }
 
-func (r *rabbitmqChannel) Consume(queue, consumer string, autoAck, exclusive, noLocal, noWail bool, args amqp.Table) (<-chan amqp.Delivery, error) {
+func (r *rabbitmqChannel) Consume(queue, consumer string, autoAck, exclusive, noLocal, noWail bool,
+	args amqp.Table) (<-chan amqp.Delivery, error) {
 	return r.channel.Consume(
 		queue,
 		// 用来区分多个消费者

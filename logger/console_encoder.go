@@ -68,6 +68,8 @@ type consoleEncoder struct {
 	reflectEnc zapcore.ReflectedEncoder
 }
 
+// nolint:gocritic
+//
 // NewJSONEncoder creates a fast, low-allocation JSON encoder. The encoder
 // appropriately escapes all field keys and values.
 //
@@ -79,10 +81,10 @@ type consoleEncoder struct {
 // pair) when unmarshaling, but users should attempt to avoid adding duplicate
 // keys.
 func NewConsoleEncoder(cfg zapcore.EncoderConfig) zapcore.Encoder {
-	return newConsoleEncoder(cfg, false)
+	return newConsoleEncoder(&cfg, false)
 }
 
-func newConsoleEncoder(cfg zapcore.EncoderConfig, spaced bool) *consoleEncoder {
+func newConsoleEncoder(cfg *zapcore.EncoderConfig, spaced bool) *consoleEncoder {
 	if cfg.ConsoleSeparator == "" {
 		// Use a default delimiter of '\t' for backwards compatibility
 		cfg.ConsoleSeparator = "\t"
@@ -104,7 +106,7 @@ func newConsoleEncoder(cfg zapcore.EncoderConfig, spaced bool) *consoleEncoder {
 	}
 
 	return &consoleEncoder{
-		EncoderConfig: &cfg,
+		EncoderConfig: cfg,
 		buf:           _pool.Get(),
 		spaced:        spaced,
 	}
@@ -317,10 +319,10 @@ func (enc *consoleEncoder) AppendString(val string) {
 	enc.buf.AppendByte(' ')
 }
 
-func (enc *consoleEncoder) AppendTimeLayout(time time.Time, layout string) {
+func (enc *consoleEncoder) AppendTimeLayout(t time.Time, layout string) {
 	enc.addElementSeparator()
 	enc.buf.AppendByte('"')
-	enc.buf.AppendTime(time, layout)
+	enc.buf.AppendTime(t, layout)
 	enc.buf.AppendByte('"')
 	enc.buf.AppendByte(' ')
 }
@@ -368,7 +370,7 @@ func (enc *consoleEncoder) AppendUintptr(v uintptr)        { enc.AppendUint64(ui
 
 func (enc *consoleEncoder) Clone() zapcore.Encoder {
 	clone := enc.clone()
-	clone.buf.Write(enc.buf.Bytes())
+	_, _ = clone.buf.Write(enc.buf.Bytes())
 	return clone
 }
 
@@ -381,6 +383,7 @@ func (enc *consoleEncoder) clone() *consoleEncoder {
 	return clone
 }
 
+// nolint:gocritic
 func (enc *consoleEncoder) EncodeEntry(ent zapcore.Entry, fields []zapcore.Field) (*buffer.Buffer, error) {
 	line := _pool.Get()
 
@@ -443,10 +446,6 @@ func (enc *consoleEncoder) EncodeEntry(ent zapcore.Entry, fields []zapcore.Field
 	return line, nil
 }
 
-func (enc *consoleEncoder) truncate() {
-	enc.buf.Reset()
-}
-
 func (enc *consoleEncoder) closeOpenNamespaces() {
 	for i := 0; i < enc.openNamespaces; i++ {
 		enc.buf.AppendByte('}')
@@ -456,9 +455,7 @@ func (enc *consoleEncoder) closeOpenNamespaces() {
 
 func (enc *consoleEncoder) addKey(key string) {
 	enc.addElementSeparator()
-	//enc.buf.AppendByte('"')
 	enc.safeAddString(key)
-	//enc.buf.AppendByte('"')
 	enc.buf.AppendByte('=')
 	if enc.spaced {
 		enc.buf.AppendByte(' ')
@@ -527,7 +524,7 @@ func (enc *consoleEncoder) safeAddByteString(s []byte) {
 			i++
 			continue
 		}
-		enc.buf.Write(s[i : i+size])
+		_, _ = enc.buf.Write(s[i : i+size])
 		i += size
 	}
 }
@@ -537,7 +534,7 @@ func (enc *consoleEncoder) tryAddRuneSelf(b byte) bool {
 	if b >= utf8.RuneSelf {
 		return false
 	}
-	if 0x20 <= b && b != '\\' && b != '"' {
+	if b >= 0x20 && b != '\\' && b != '"' {
 		enc.buf.AppendByte(b)
 		return true
 	}
@@ -593,9 +590,7 @@ func (enc *consoleEncoder) writeContext(line *buffer.Buffer, extra []zapcore.Fie
 	}
 
 	enc.addSeparatorIfNecessary(line)
-	//line.AppendByte('{')
-	line.Write(context.buf.Bytes())
-	//line.AppendByte('}')
+	_, _ = line.Write(context.buf.Bytes())
 }
 
 func addFields(enc zapcore.ObjectEncoder, fields []zapcore.Field) {
