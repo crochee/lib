@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/json-iterator/go"
 )
@@ -13,17 +14,17 @@ type ErrorCode interface {
 	json.Marshaler
 	json.Unmarshaler
 	StatusCode() int
-	Code() int
+	Code() string
 	Message() string
 	Result() interface{}
 	WithStatusCode(int) ErrorCode
-	WithCode(int) ErrorCode
+	WithCode(string) ErrorCode
 	WithMessage(string) ErrorCode
 	WithResult(interface{}) ErrorCode
 }
 
 type InnerError struct {
-	Code    int         `json:"code"`
+	Code    string      `json:"code"`
 	Message string      `json:"message"`
 	Result  interface{} `json:"result"`
 }
@@ -38,24 +39,22 @@ func From(response *http.Response) ErrorCode {
 	return result.WithStatusCode(response.StatusCode)
 }
 
-func Froze(code int, message string) ErrorCode {
+func Froze(code, message string) ErrorCode {
 	return &ErrCode{
 		code: code,
 		msg:  message,
 	}
 }
 
-const codeBit = 100000
-
 // ErrCode 规定组成部分为http状态码+5位错误码
 type ErrCode struct {
-	code   int
+	code   string
 	msg    string
 	result interface{}
 }
 
 func (e *ErrCode) Error() string {
-	return fmt.Sprintf("code:%d,message:%s,result:%s", e.Code(), e.Message(), e.Result())
+	return fmt.Sprintf("code:%s,message:%s,result:%s", e.Code(), e.Message(), e.Result())
 }
 
 func (e *ErrCode) MarshalJSON() ([]byte, error) {
@@ -79,11 +78,12 @@ func (e *ErrCode) UnmarshalJSON(bytes []byte) error {
 }
 
 func (e *ErrCode) StatusCode() int {
-	return e.code / codeBit
+	statusCode, _ := strconv.Atoi(e.code[:3])
+	return statusCode
 }
 
-func (e *ErrCode) Code() int {
-	return e.code % codeBit
+func (e *ErrCode) Code() string {
+	return e.code
 }
 
 func (e *ErrCode) Message() string {
@@ -96,13 +96,13 @@ func (e *ErrCode) Result() interface{} {
 
 func (e *ErrCode) WithStatusCode(statusCode int) ErrorCode {
 	ec := *e
-	ec.code = ec.Code() + statusCode*codeBit
+	ec.code = strconv.Itoa(statusCode) + ec.Code()[3:]
 	return &ec
 }
 
-func (e *ErrCode) WithCode(code int) ErrorCode {
+func (e *ErrCode) WithCode(code string) ErrorCode {
 	ec := *e
-	ec.code = ec.StatusCode()*codeBit + code
+	ec.code = strconv.Itoa(ec.StatusCode()) + code[3:]
 	return &ec
 }
 
@@ -121,16 +121,16 @@ func (e *ErrCode) WithResult(result interface{}) ErrorCode {
 var (
 	// 00~99为服务级别错误码
 
-	ErrInternalServerError = Froze(50010000, "服务器内部错误")
-	ErrInvalidParam        = Froze(40010001, "请求参数不正确")
-	ErrNotFound            = Froze(40410002, "资源不存在")
-	ErrNotAllowMethod      = Froze(40510003, "不允许此方法")
-	ErrParseContent        = Froze(50010004, "解析内容失败")
+	ErrInternalServerError = Froze("5000000000", "服务器内部错误")
+	ErrInvalidParam        = Froze("4000000001", "请求参数不正确")
+	ErrNotFound            = Froze("4040000002", "资源不存在")
+	ErrNotAllowMethod      = Froze("4050000003", "不允许此方法")
+	ErrParseContent        = Froze("5000000004", "解析内容失败")
 )
 
 // AddCode business code to codeMessageBox
 func AddCode(m map[ErrorCode]struct{}) error {
-	temp := make(map[int]string)
+	temp := make(map[string]string)
 	for errorCode := range map[ErrorCode]struct{}{
 		ErrInternalServerError: {},
 		ErrInvalidParam:        {},
@@ -138,20 +138,39 @@ func AddCode(m map[ErrorCode]struct{}) error {
 		ErrNotAllowMethod:      {},
 		ErrParseContent:        {},
 	} {
+		if err := validateErrorCode(errorCode); err != nil {
+			return err
+		}
 		code := errorCode.Code()
 		value, ok := temp[code]
 		if ok {
-			return fmt.Errorf("error code %d(%s) already exists", code, value)
+			return fmt.Errorf("error code %s(%s) already exists", code, value)
 		}
 		temp[code] = errorCode.Message()
 	}
 	for errorCode := range m {
+		if err := validateErrorCode(errorCode); err != nil {
+			return err
+		}
 		code := errorCode.Code()
 		value, ok := temp[code]
 		if ok {
-			return fmt.Errorf("error code %d(%s) already exists", code, value)
+			return fmt.Errorf("error code %s(%s) already exists", code, value)
 		}
 		temp[code] = errorCode.Message()
+	}
+	return nil
+}
+
+// validateErrorCode check err must be 3(http)+3(service)+4(error)
+func validateErrorCode(err ErrorCode) error {
+	code := err.Code()
+	statusCode := err.StatusCode()
+	if statusCode < 100 || statusCode >= 600 {
+		return fmt.Errorf("error code %s has invalid status code %d", code, statusCode)
+	}
+	if l := len(code); l != 10 {
+		return fmt.Errorf("error code %s is %d,but it must be 10", code, l)
 	}
 	return nil
 }
