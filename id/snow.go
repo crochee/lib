@@ -4,13 +4,16 @@ import (
 	"errors"
 	"net"
 	"strconv"
+	"time"
 
 	"github.com/sony/sonyflake"
 
 	"github.com/crochee/lirity/variable"
 )
 
-var sf = sonyflake.NewSonyflake(sonyflake.Settings{MachineID: machineID})
+var sf = sonyflake.NewSonyflake(sonyflake.Settings{
+	StartTime: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+	MachineID: machineID})
 
 // NextID generate id
 func NextID() (uint64, error) {
