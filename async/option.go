@@ -3,7 +3,6 @@ package async
 import (
 	jsoniter "github.com/json-iterator/go"
 
-	"github.com/crochee/lirity/mq"
 	"github.com/crochee/lirity/validator"
 )
 
@@ -22,7 +21,7 @@ func WithManagerCallback(manager ManagerCallback) Option {
 	}
 }
 
-func WithMarshalAPI(marshal mq.MarshalAPI) Option {
+func WithMarshalAPI(marshal MarshalAPI) Option {
 	return func(o *option) {
 		o.marshal = marshal
 	}

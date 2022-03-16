@@ -8,7 +8,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/crochee/lirity/logger"
-	"github.com/crochee/lirity/mq"
 	"github.com/crochee/lirity/routine"
 	"github.com/crochee/lirity/validator"
 )
@@ -46,7 +45,7 @@ func NewTaskConsumer(ctx context.Context, opts ...Option) Consumer {
 type taskConsumer struct {
 	pool      *routine.Pool   // goroutine safe run pool
 	manager   ManagerCallback // manager executor how to run
-	marshal   mq.MarshalAPI   // mq  assemble request or response
+	marshal   MarshalAPI      // mq  assemble request or response
 	handler   jsoniter.API
 	validator validator.Validator
 }
@@ -73,7 +72,7 @@ func (t *taskConsumer) Subscribe(channel Channel, queueName string) error {
 			deliveries, err := channel.Consume(
 				queueName,
 				// 用来区分多个消费者
-				"dcs.api.async.consumer."+queueName,
+				"consumer."+queueName,
 				// 是否自动应答(自动应答确认消息，这里设置为否，在下面手动应答确认)
 				false,
 				// 是否具有排他性

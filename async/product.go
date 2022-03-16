@@ -11,7 +11,6 @@ import (
 	"github.com/json-iterator/go"
 	"github.com/streadway/amqp"
 
-	"github.com/crochee/lirity/mq"
 	"github.com/crochee/lirity/validator"
 )
 
@@ -31,7 +30,7 @@ type TaskProducer struct {
 func NewTaskProducer(opts ...Option) Producer {
 	o := &option{
 		manager:   NewManager(),
-		marshal:   mq.DefaultMarshal{},
+		marshal:   DefaultMarshal{},
 		handler:   jsoniter.ConfigCompatibleWithStandardLibrary,
 		validator: validator.NewValidator(),
 	}
