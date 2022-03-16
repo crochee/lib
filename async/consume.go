@@ -2,10 +2,10 @@ package async
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/json-iterator/go"
 	"github.com/streadway/amqp"
+	"go.uber.org/zap"
 
 	"github.com/crochee/lirity/logger"
 	"github.com/crochee/lirity/mq"
@@ -13,44 +13,57 @@ import (
 	"github.com/crochee/lirity/validator"
 )
 
-func NewTaskConsumer(ctx context.Context, opts ...func(*ConsumerOption)) *taskConsumer {
-	t := &taskConsumer{
-		ConsumerOption: ConsumerOption{
-			Pool: routine.NewPool(ctx, routine.Recover(func(ctx context.Context, i interface{}) {
-				logger.From(ctx).Sugar().Errorf("%v", i)
-			})),
-			Manager:     NewManager(),
-			Marshal:     mq.DefaultMarshal{},
-			JSONHandler: jsoniter.ConfigCompatibleWithStandardLibrary,
-			ParamPool:   NewParamPool(),
-			Validator:   validator.NewValidator(),
-		},
-	}
-	for _, opt := range opts {
-		opt(&t.ConsumerOption)
-	}
-	return t
+// Consumer async impl
+type Consumer interface {
+	Register(name string, callback Callback)
+	Unregister(name string)
+	Subscribe(channel Channel, queueName string) error
 }
 
-type ConsumerOption struct {
-	Pool        *routine.Pool   // goroutine safe run pool
-	Manager     ManagerExecutor // manager executor how to run
-	Marshal     mq.MarshalAPI   // mq  assemble request or response
-	JSONHandler jsoniter.API
-	ParamPool   ParamPool // get Param
-	Validator   validator.Validator
+// NewTaskConsumer gets Consumer
+func NewTaskConsumer(ctx context.Context, opts ...Option) Consumer {
+	o := &option{
+		manager:   NewManager(),
+		marshal:   DefaultMarshal{},
+		handler:   jsoniter.ConfigCompatibleWithStandardLibrary,
+		validator: validator.NewValidator(),
+	}
+
+	for _, opt := range opts {
+		opt(o)
+	}
+	return &taskConsumer{
+		pool: routine.NewPool(ctx, routine.Recover(func(ctx context.Context, i interface{}) {
+			logger.From(ctx).Error("recover", zap.Any("error", i))
+		})),
+		manager:   o.manager,
+		marshal:   o.marshal,
+		handler:   o.handler,
+		validator: o.validator,
+	}
 }
 
 type taskConsumer struct {
-	ConsumerOption
+	pool      *routine.Pool   // goroutine safe run pool
+	manager   ManagerCallback // manager executor how to run
+	marshal   mq.MarshalAPI   // mq  assemble request or response
+	handler   jsoniter.API
+	validator validator.Validator
 }
 
-func (t *taskConsumer) Register(executors ...Executor) error {
-	return t.Manager.Register(executors...)
+// Register registers a Callback with name
+func (t *taskConsumer) Register(name string, callback Callback) {
+	t.manager.Register(name, callback)
 }
 
+// Unregister unregisters a Callback with name
+func (t *taskConsumer) Unregister(name string) {
+	t.manager.Unregister(name)
+}
+
+// Subscribe consume message form Channel with queueName
 func (t *taskConsumer) Subscribe(channel Channel, queueName string) error {
-	t.Pool.Go(func(ctx context.Context) {
+	t.pool.Go(func(ctx context.Context) {
 		for {
 			select {
 			case <-ctx.Done():
@@ -60,7 +73,7 @@ func (t *taskConsumer) Subscribe(channel Channel, queueName string) error {
 			deliveries, err := channel.Consume(
 				queueName,
 				// 用来区分多个消费者
-				"consumer."+queueName,
+				"dcs.api.async.consumer."+queueName,
 				// 是否自动应答(自动应答确认消息，这里设置为否，在下面手动应答确认)
 				false,
 				// 是否具有排他性
@@ -73,14 +86,13 @@ func (t *taskConsumer) Subscribe(channel Channel, queueName string) error {
 				nil,
 			)
 			if err != nil {
-				logger.From(ctx).Error(err.Error())
-				fmt.Println(err)
+				logger.From(ctx).Error("consumer failed", zap.Error(err))
 				continue
 			}
 			t.handleMessage(ctx, deliveries)
 		}
 	})
-	t.Pool.Wait()
+	t.pool.Wait()
 	return nil
 }
 
@@ -90,51 +102,53 @@ func (t *taskConsumer) handleMessage(ctx context.Context, deliveries <-chan amqp
 		case <-ctx.Done():
 			return
 		case v := <-deliveries:
-			t.Pool.Go(func(ctx context.Context) {
+			t.pool.Go(func(ctx context.Context) {
 				if err := t.handle(ctx, v); err != nil {
-					logger.From(ctx).Error(err.Error())
+					logger.From(ctx).Error("handle failed", zap.Error(err))
 				}
 			})
 		}
 	}
 }
 
-// nolint:gocritic
 func (t *taskConsumer) handle(ctx context.Context, d amqp.Delivery) error {
-	msgStruct, err := t.Marshal.Unmarshal(&d)
+	msgStruct, err := t.marshal.Unmarshal(&d)
 	if err != nil {
-		logger.From(ctx).Error(err.Error())
+		logger.From(ctx).Error("unmarshal failed", zap.Error(err))
 		// 当requeue为true时，将该消息排队，以在另一个通道上传递给使用者。
 		// 当requeue为false或服务器无法将该消息排队时，它将被丢弃。
-		if err = d.Reject(false); err != nil { // nolint:gocritic
+		if err = d.Reject(false); err != nil {
 			return err
 		}
 		return nil
 	}
-	logger.From(ctx).Sugar().Infof("consume uuid %s body:%s", msgStruct.UUID, msgStruct.Payload)
-	param := t.ParamPool.Get()
-	if err = t.JSONHandler.Unmarshal(msgStruct.Payload, param); err != nil {
-		logger.From(ctx).Error(err.Error())
+	l := logger.From(ctx).With(zap.String("uuid", msgStruct.UUID))
+	ctx = logger.With(ctx, l)
+
+	logger.From(ctx).Sugar().Debugf("consume body:%s", msgStruct.Payload)
+	param := Get()
+	if err = t.handler.Unmarshal(msgStruct.Payload, param); err != nil {
+		logger.From(ctx).Error("unmarshal failed", zap.Error(err))
 		// 当requeue为true时，将该消息排队，以在另一个通道上传递给使用者。
 		// 当requeue为false或服务器无法将该消息排队时，它将被丢弃。
-		if err = d.Reject(false); err != nil { // nolint:gocritic
+		if err = d.Reject(false); err != nil {
 			return err
 		}
 		return nil
 	}
-	if err = t.Validator.ValidateStruct(param); err != nil {
-		logger.From(ctx).Error(err.Error())
+	if err = t.validator.ValidateStruct(param); err != nil {
+		logger.From(ctx).Error("validate struct failed", zap.Error(err))
 		// 当requeue为true时，将该消息排队，以在另一个通道上传递给使用者。
 		// 当requeue为false或服务器无法将该消息排队时，它将被丢弃。
-		if err = d.Reject(false); err != nil { // nolint:gocritic
+		if err = d.Reject(false); err != nil {
 			return err
 		}
 		return nil
 	}
-	err = t.Manager.Run(ctx, param)
-	t.ParamPool.Put(param)
+	err = t.manager.Run(ctx, param)
+	Put(param)
 	if err != nil {
-		logger.From(ctx).Error(err.Error())
+		logger.From(ctx).Error("run failed", zap.Error(err))
 		// 当requeue为true时，将该消息排队，以在另一个通道上传递给使用者。
 		// 当requeue为false或服务器无法将该消息排队时，它将被丢弃。
 		if err = d.Reject(false); err != nil {

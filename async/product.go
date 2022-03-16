@@ -3,7 +3,7 @@ package async
 import (
 	"context"
 	"fmt"
-
+	"io"
 	"sync"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -15,56 +15,56 @@ import (
 	"github.com/crochee/lirity/validator"
 )
 
-type ProducerOption struct {
-	Marshal     mq.MarshalAPI
-	Exchange    string
-	JSONHandler jsoniter.API
-	ParamPool   ParamPool
-	Validator   validator.Validator
+type Producer interface {
+	Publish(ctx context.Context, channel Channel, exchange, routingKey string, param *Param) error
+	io.Closer
 }
 
 type TaskProducer struct {
-	ProducerOption
-	wg sync.WaitGroup
+	marshal   MarshalAPI // mq  assemble request or response
+	handler   jsoniter.API
+	validator validator.Validator
+	wg        sync.WaitGroup
 }
 
-// NewProducer return message.Publisher
-func NewTaskProducer(opts ...func(*ProducerOption)) *TaskProducer {
-	t := &TaskProducer{
-		ProducerOption: ProducerOption{
-			Marshal:     mq.DefaultMarshal{},
-			Exchange:    "dcs.api.async",
-			JSONHandler: jsoniter.ConfigCompatibleWithStandardLibrary,
-			ParamPool:   NewParamPool(),
-			Validator:   validator.NewValidator(),
-		},
+// NewTaskProducer gets Producer
+func NewTaskProducer(opts ...Option) Producer {
+	o := &option{
+		manager:   NewManager(),
+		marshal:   mq.DefaultMarshal{},
+		handler:   jsoniter.ConfigCompatibleWithStandardLibrary,
+		validator: validator.NewValidator(),
 	}
+
 	for _, opt := range opts {
-		opt(&t.ProducerOption)
+		opt(o)
 	}
-	return t
+	return &TaskProducer{
+		marshal:   o.marshal,
+		handler:   o.handler,
+		validator: o.validator,
+	}
 }
 
-func (t *TaskProducer) Publish(ctx context.Context, channel Channel, routingKey string, param *Param) error {
+func (t *TaskProducer) Publish(ctx context.Context, channel Channel, exchange, routingKey string, param *Param) error {
 	t.wg.Add(1)
 	defer t.wg.Done()
-	if err := t.Validator.ValidateStruct(param); err != nil {
+	if err := t.validator.ValidateStruct(param); err != nil {
 		return err
 	}
-	data, err := t.JSONHandler.Marshal(param)
+	data, err := t.handler.Marshal(param)
 	if err != nil {
 		return err
 	}
-
 	uuid := watermill.NewUUID()
 
 	var amqpMsg amqp.Publishing
-	if amqpMsg, err = t.Marshal.Marshal(message.NewMessage(uuid, data)); err != nil {
+	if amqpMsg, err = t.marshal.Marshal(message.NewMessage(uuid, data)); err != nil {
 		return fmt.Errorf("cann't marshal message,%w", err)
 	}
 	// 发送消息到队列中
 	return channel.Publish(
-		t.Exchange,
+		exchange,
 		routingKey,
 		// 如果为true，根据exchange类型和routekey类型，如果无法找到符合条件的队列，name会把发送的信息返回给发送者
 		false,
@@ -73,10 +73,6 @@ func (t *TaskProducer) Publish(ctx context.Context, channel Channel, routingKey 
 		// 发送信息
 		amqpMsg,
 	)
-}
-
-func (t *TaskProducer) GetParam() *Param {
-	return t.ParamPool.Get()
 }
 
 func (t *TaskProducer) Close() error {

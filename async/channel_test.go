@@ -2,12 +2,12 @@ package async
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"testing"
 	"time"
 
 	"github.com/streadway/amqp"
-
-	"github.com/crochee/lirity/mq"
 )
 
 // mockChannel is a mock of Channel.
@@ -29,7 +29,7 @@ func (ch *mockChannel) Consume(queue, consumer string, autoAck, exclusive, noLoc
 	return dev, nil
 }
 
-func (ch *mockChannel) Close() error {
+func (ch *mockChannel) DeclareAndBind(exchange, kind, queue, key string, args ...map[string]interface{}) error {
 	return nil
 }
 
@@ -81,12 +81,12 @@ func TestInteract(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	tc := NewTaskConsumer(ctx)
-	if err := tc.Register(test{}, &test1{}, &multiTest{list: []Executor{test{}, &test1{}}}); err != nil {
-		t.Fatal(err)
-	}
-	if err := tp.Publish(context.Background(), c, "", &Param{
-		Name: "async.multiTest",
-		Data: nil,
+	tc.Register("test", test{})
+	tc.Register("multiTest", &multiTest{list: []Callback{test{}, &test1{}}})
+	if err := tp.Publish(ctx, c, "", "", &Param{
+		TaskType: "test",
+		Metadata: nil,
+		Data:     nil,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -96,26 +96,23 @@ func TestInteract(t *testing.T) {
 }
 
 func TestProduce(t *testing.T) {
-	cp, err := NewRabbitmqChannel(func(option *mq.Option) {
-		option.URI = "amqp://admin:1234567@localhost:5672/"
-	})
+	cp, err := NewRabbitmqChannel(WithURI("amqp://admin:1234567@localhost:5672/"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer cp.Close()
 	tp := NewTaskProducer()
-	for i := 0; i < 20; i++ {
-		if err = tp.Publish(context.Background(), cp, "msg.dcs.woden", &Param{
-			Name: "async.multiTest",
-			Data: nil,
+	for i := 0; i < 20000; i++ {
+		if err = tp.Publish(context.Background(), cp, "dcs.api.async", "msg.dcs.woden", &Param{
+			TaskType: "rudder",
+			Data:     []byte(fmt.Sprintf("task1:%d", i)),
 		}); err != nil {
 			t.Fatal(err)
 		}
 	}
-	for i := 0; i < 20; i++ {
-		if err = tp.Publish(context.Background(), cp, "msg.dcs.woden", &Param{
-			Name: "async.testError",
-			Data: nil,
+	for i := 0; i < 20000; i++ {
+		if err = tp.Publish(context.Background(), cp, "dcs.api.async", "msg.dcs.woden", &Param{
+			TaskType: "rudder",
+			Data:     []byte(fmt.Sprintf("task2:%d", i)),
 		}); err != nil {
 			t.Fatal(err)
 		}
@@ -123,18 +120,26 @@ func TestProduce(t *testing.T) {
 }
 
 func TestConsume(t *testing.T) {
-	cc, err := NewRabbitmqChannel(func(option *mq.Option) {
-		option.URI = "amqp://admin:1234567@localhost:5672/"
-	})
+	cc, err := NewRabbitmqChannel(WithURI("amqp://admin:1234567@localhost:5672/"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer cc.Close()
+	//ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	//defer cancel()
 	tc := NewTaskConsumer(context.Background())
-	if err = tc.Register(testError{}, test{}, &test1{}, &multiTest{list: []Executor{test{}, &test1{}}}); err != nil {
-		t.Fatal(err)
-	}
+	tc.Register("testError", testError{})
+	tc.Register("test1", &test1{})
+	tc.Register("multiTest", &multiTest{list: []Callback{test{}, &test1{}}})
+	tc.Register("rudder", &rudder{})
 	if err = tc.Subscribe(cc, "msg.dcs.woden"); err != nil {
 		t.Fatal(err)
 	}
+}
+
+type rudder struct {
+}
+
+func (r rudder) Run(ctx context.Context, param *Param) error {
+	log.Printf("%s %v %s\n", param.TaskType, param.Metadata, param.Data)
+	return nil
 }
